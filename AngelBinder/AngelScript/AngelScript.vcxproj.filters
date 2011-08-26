@@ -1,0 +1,89 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Addons">
+      <UniqueIdentifier>{ea6fe62b-9325-4548-b67e-0d827094d1bc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Addons\scriptany">
+      <UniqueIdentifier>{2e4d43fc-1775-48e2-b68a-d12722e4a5cb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Addons\scriptarray">
+      <UniqueIdentifier>{151aaa44-e0c4-4598-aaf6-c2ff31a8f98e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Addons\scriptbuilder">
+      <UniqueIdentifier>{2e57ff11-eda6-4873-880a-dfcc6053cfdc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Addons\scriptdictionary">
+      <UniqueIdentifier>{135eff23-4b99-4b71-b042-0e827f855d37}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Addons\scriptfile">
+      <UniqueIdentifier>{f6d9644f-8743-4e1a-9cba-c27e581d48f3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Addons\scriptmath">
+      <UniqueIdentifier>{de56e34c-a1f1-4540-a2e1-f0e11301457e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Addons\scriptstring">
+      <UniqueIdentifier>{84030226-0b1c-4a1d-97ca-51ee62e6b868}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AngelScript">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>
+      </Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="angelscript.h">
+      <Filter>AngelScript</Filter>
+    </ClInclude>
+    <ClInclude Include="scriptany\scriptany.h">
+      <Filter>Addons\scriptany</Filter>
+    </ClInclude>
+    <ClInclude Include="scriptarray\scriptarray.h">
+      <Filter>Addons\scriptarray</Filter>
+    </ClInclude>
+    <ClInclude Include="scriptbuilder\scriptbuilder.h">
+      <Filter>Addons\scriptbuilder</Filter>
+    </ClInclude>
+    <ClInclude Include="scriptdictionary\scriptdictionary.h">
+      <Filter>Addons\scriptdictionary</Filter>
+    </ClInclude>
+    <ClInclude Include="scriptfile\scriptfile.h">
+      <Filter>Addons\scriptfile</Filter>
+    </ClInclude>
+    <ClInclude Include="scriptmath\scriptmath.h">
+      <Filter>Addons\scriptmath</Filter>
+    </ClInclude>
+    <ClInclude Include="scriptstdstring\scriptstdstring.h">
+      <Filter>Addons\scriptstring</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="scriptany\scriptany.cpp">
+      <Filter>Addons\scriptany</Filter>
+    </ClCompile>
+    <ClCompile Include="scriptarray\scriptarray.cpp">
+      <Filter>Addons\scriptarray</Filter>
+    </ClCompile>
+    <ClCompile Include="scriptbuilder\scriptbuilder.cpp">
+      <Filter>Addons\scriptbuilder</Filter>
+    </ClCompile>
+    <ClCompile Include="scriptdictionary\scriptdictionary.cpp">
+      <Filter>Addons\scriptdictionary</Filter>
+    </ClCompile>
+    <ClCompile Include="scriptfile\scriptfile.cpp">
+      <Filter>Addons\scriptfile</Filter>
+    </ClCompile>
+    <ClCompile Include="scriptmath\scriptmath.cpp">
+      <Filter>Addons\scriptmath</Filter>
+    </ClCompile>
+    <ClCompile Include="scriptstdstring\scriptstdstring.cpp">
+      <Filter>Addons\scriptstring</Filter>
+    </ClCompile>
+    <ClCompile Include="scriptstdstring\scriptstdstring_utils.cpp">
+      <Filter>Addons\scriptstring</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="License.txt" />
+  </ItemGroup>
+</Project>

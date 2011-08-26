@@ -1,0 +1,32 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AngelScript", "AngelScript\AngelScript.vcxproj", "{E0C192A0-2B3C-44C9-9A25-DFF73155EA77}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AngelBinder", "AngelBinder\AngelBinder.vcxproj", "{236EAC20-14AA-49D9-8665-7DA0F1F14F47}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LibObs", "LibObs\LibObs.vcxproj", "{73A8E2D3-2A9D-4262-A4D1-213076B36EE5}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E0C192A0-2B3C-44C9-9A25-DFF73155EA77}.Debug|Win32.ActiveCfg = Debug|Win32
+		{E0C192A0-2B3C-44C9-9A25-DFF73155EA77}.Debug|Win32.Build.0 = Debug|Win32
+		{E0C192A0-2B3C-44C9-9A25-DFF73155EA77}.Release|Win32.ActiveCfg = Release|Win32
+		{E0C192A0-2B3C-44C9-9A25-DFF73155EA77}.Release|Win32.Build.0 = Release|Win32
+		{236EAC20-14AA-49D9-8665-7DA0F1F14F47}.Debug|Win32.ActiveCfg = Debug|Win32
+		{236EAC20-14AA-49D9-8665-7DA0F1F14F47}.Debug|Win32.Build.0 = Debug|Win32
+		{236EAC20-14AA-49D9-8665-7DA0F1F14F47}.Release|Win32.ActiveCfg = Release|Win32
+		{236EAC20-14AA-49D9-8665-7DA0F1F14F47}.Release|Win32.Build.0 = Release|Win32
+		{73A8E2D3-2A9D-4262-A4D1-213076B36EE5}.Debug|Win32.ActiveCfg = Debug|Win32
+		{73A8E2D3-2A9D-4262-A4D1-213076B36EE5}.Debug|Win32.Build.0 = Debug|Win32
+		{73A8E2D3-2A9D-4262-A4D1-213076B36EE5}.Release|Win32.ActiveCfg = Release|Win32
+		{73A8E2D3-2A9D-4262-A4D1-213076B36EE5}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

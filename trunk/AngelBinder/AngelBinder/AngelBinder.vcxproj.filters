@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="System">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>
+      </Extensions>
+    </Filter>
+    <Filter Include="AngelBinder">
+      <UniqueIdentifier>{a864ed68-b180-4eae-a8cb-3b5c88a75ad4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AngelBinder\Addon">
+      <UniqueIdentifier>{a23b303c-1552-4c8d-b398-fdc1e47bb986}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AngelBinder\Example">
+      <UniqueIdentifier>{1b79dcf9-688e-4f27-af89-17b0787393e4}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ReadMe.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="stdafx.h">
+      <Filter>System</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>System</Filter>
+    </ClInclude>
+    <ClInclude Include="AngelBinder.h">
+      <Filter>AngelBinder\Addon</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>System</Filter>
+    </ClCompile>
+    <ClCompile Include="AngelBinder.cpp">
+      <Filter>AngelBinder\Addon</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>AngelBinder\Example</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

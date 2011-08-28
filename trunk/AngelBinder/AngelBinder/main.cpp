@@ -1,6 +1,7 @@
 // AngelBindTest.cpp : Defines the entry point for the console application.
 //
 #include "stdafx.h"
+#include <LibObs/observers.h>
 #include <scriptstdstring/scriptstdstring.h>
 
 #include <iostream>
@@ -65,6 +66,15 @@ void test2();
 void test3();
 
 ///
+/// Message event handler
+///
+
+void onScriptMessage(Script* script, std::string message)
+{
+	cout << "[Script] " << message << endl;
+}
+
+///
 /// Usage Example
 ///
 
@@ -76,6 +86,13 @@ int main(int argc, char* argv[])
 	///
 
 	Script script("MyModuleName");
+
+	///
+	/// Setup the message outputs if you want to
+	///
+
+	/// This way if not using libobs.
+	script.messages() = &onScriptMessage;
 
 	///
 	/// You'll be able to use the traditional way to type-register
@@ -137,7 +154,7 @@ int main(int argc, char* argv[])
 	/// Compiles a file
 	///
 
-	script.compileFile("AngelBinder.as");
+ 	script.compileFile("AngelBinder.as");
 
 	return 0;
 

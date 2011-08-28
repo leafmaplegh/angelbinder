@@ -26,10 +26,6 @@
 /// #define AB_USE_EVENTSYSTEM
 /// 
 
-#ifdef AB_USE_EVENTSYSTEM
-#include <libobs/events.h>
-#endif
-
 #ifndef AB_NO_NAMESPACE
 #define AB_BEGIN_NAMESPACE		namespace AngelBinder {
 #define AB_END_NAMESPACE		}
@@ -51,13 +47,8 @@ AB_BEGIN_NAMESPACE
 #define AB_THROW		true
 #define AB_NOTHROW		false
 
-#ifdef AB_TRANSLATE_TYPE
-#define AB_MESSAGE_INVOKE(i,m)				this->messages().invoke(i,m);
-#define AB_MESSAGE_INVOKE_STATIC(s,i,m)		(s)->messages().invoke(i,m);
-#else
 #define AB_MESSAGE_INVOKE(i,m)				if(this->messages() != NULL) this->messages()(i,m);
 #define AB_MESSAGE_INVOKE_STATIC(s,i,m)		if((s)->messages() != NULL) (s)->messages()(i,m);
-#endif
 
 #define AB_SCRIPT_ASSERT(x,m,t) { \
 		if(!(x)) { \
@@ -181,7 +172,7 @@ struct Type<T&>
 {
 	static std::string toString()
 	{
-		return TypeString<T>::value() + "& inout";
+		return TypeString<T>::value() + "&inout";
 	}
 };
 
@@ -193,7 +184,7 @@ struct Type<const T&>
 {
 	static std::string toString()
 	{
-		return TypeString<T>::value() + "& in";
+		return TypeString<T>::value() + "&in";
 	}
 };
 
@@ -255,11 +246,7 @@ public:
 	///
 	/// Script engine's message callback
 	///
-#ifdef AB_USE_EVENTSYSTEM
-	typedef Event_v2<Script*, std::string> MessageCallback;
-#else
 	typedef void(*MessageCallback)(Script*, std::string);
-#endif
 
 private:
 	///
@@ -413,20 +400,12 @@ public:
 	///
 	/// Starts an exporter
 	///
-	static Exporter Exporter::Export( Script& script )
-	{
-		Exporter exporter(script);
-		return exporter;
-	}
+	static Exporter Export( Script& script );
 
 	///
 	/// BaseExporter wrapper
 	///
-	static FunctionExporter Exporter::Functions()
-	{
-		FunctionExporter exporter;
-		return exporter;
-	}
+	static FunctionExporter Functions();
 
 	///
 	/// Exports the functions

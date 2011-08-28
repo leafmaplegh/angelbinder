@@ -111,13 +111,6 @@ bool Script::compileScript ( std::string script )
 	return true;
 }
 
-
-
-Script::MessageCallback& Script::messages() 
-{
-	return this->_messages;
-}
-
 void Script::onScriptMessage( const asSMessageInfo *msg, void *param )
 {
 	Script* engine = (Script*)param;
@@ -157,6 +150,11 @@ Builder& Script::builder()
 	}
 }
 
+Script::MessageCallback& Script::messages()
+{
+	return this->_messages;
+}
+
 /**
  * Extras
  **/
@@ -166,13 +164,26 @@ Exporter::Exporter( Script& script )
 {
 }
 
+AngelBinder::Exporter Exporter::Export( Script& script )
+{
+	Exporter exporter(script);
+	return exporter;
+}
+
+AngelBinder::FunctionExporter Exporter::Functions()
+{
+	FunctionExporter exporter;
+	return exporter;
+}
+
 void FunctionExporter::finish( Script& instance )
 {
 	while(!this->_entries.empty())
 	{
 		FunctionClass function = this->_entries.front();
-		printf("Trying to register function: %s\n", function.name().c_str());
-		int r = instance.engine().RegisterGlobalFunction(function.decompose().c_str(), asFUNCTION(function.address()), asCALL_CDECL);
+		std::string decomposition = function.decompose();
+		AB_MESSAGE_INVOKE_STATIC(&instance, &instance, "Register function '" + function.name() + "' as '" + decomposition + "'");
+		int r = instance.engine().RegisterGlobalFunction(decomposition.c_str(), asFUNCTION(function.address()), asCALL_CDECL);
 		AB_SCRIPT_ASSERT_STATIC(r >= 0, std::string("Error registering function '" + function.name() + "'").c_str(), AB_THROW, &instance);
 		this->_entries.pop();
 	}
@@ -180,7 +191,6 @@ void FunctionExporter::finish( Script& instance )
 
 FunctionExporter::FunctionExporter()
 {
-
 }
 
 /**

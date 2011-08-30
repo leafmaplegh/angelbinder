@@ -183,7 +183,7 @@ void FunctionExporter::finish( Script& instance )
 		FunctionClass function = this->_entries.front();
 		std::string decomposition = function.decompose();
 		AB_MESSAGE_INVOKE_STATIC(&instance, &instance, "Register function '" + function.name() + "' as '" + decomposition + "'");
-		int r = instance.engine().RegisterGlobalFunction(decomposition.c_str(), asFUNCTION(function.address()), asCALL_CDECL);
+		int r = instance.engine().RegisterGlobalFunction(decomposition.c_str(), asFUNCTION(function.address()), function.convention());
 		AB_SCRIPT_ASSERT_STATIC(r >= 0, std::string("Error registering function '" + function.name() + "'").c_str(), AB_THROW, &instance);
 		this->_entries.pop();
 	}
@@ -228,9 +228,33 @@ std::string FunctionClass::name()
 	return this->_name;
 }
 
-FunctionClass::FunctionClass( std::string ret, std::string name, void* func ) : _name(name), _ret(ret), _func(func)
+FunctionClass::FunctionClass( std::string ret, std::string name, CallingConvention conv, void* func ) 
+	: _name(name), _ret(ret), _func(func), _conv(conv)
 {
+}
 
+AngelBinder::CallingConvention FunctionClass::convention()
+{
+	return this->_conv;
+}
+
+StructExporter::StructExporter( std::string name, int size ) 
+	: _name(name), _size(size)
+{
+}
+
+void StructExporter::finish( Script& instance )
+{
+	AB_MESSAGE_INVOKE_STATIC(&instance, &instance, "Registering type '" + this->_name + "'");
+	int r = instance.engine().RegisterObjectType(this->_name.c_str(), this->_size, asOBJ_VALUE | asOBJ_POD);
+	while(!this->_entries.empty())
+	{
+		StructMember memb = this->_entries.front();
+		AB_MESSAGE_INVOKE_STATIC(&instance, &instance, "Registering member '" + this->_name + "::" + memb.name + "' as '" + memb.type + "'");
+		r = instance.engine().RegisterObjectProperty(this->_name.c_str(), std::string(memb.type + " " + memb.name).c_str(), memb.offset);
+		AB_SCRIPT_ASSERT_STATIC(r >= 0, std::string("Error registering member '" + this->_name + "::" + memb.name + "'").c_str(), AB_THROW, &instance);
+		this->_entries.pop();
+	}
 }
 
 AB_END_NAMESPACE

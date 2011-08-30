@@ -189,6 +189,16 @@ struct Type<const T&>
 };
 
 ///
+/// Calling conventions
+///
+enum CallingConvention
+{
+	CallStdcall = asCALL_STDCALL,
+	CallCdecl = asCALL_CDECL
+	/* TODO: Add more? */
+};
+
+///
 /// FunctionClass parser
 ///
 class FunctionClass
@@ -203,11 +213,14 @@ private:
 	/// Stores a vector of arguments
 	std::vector<std::string> _params;
 
+	/// Calling convention
+	CallingConvention _conv;
+
 	/// Stores the pointer to the function
 	void* _func;
 
 public:
-	FunctionClass(std::string ret, std::string name, void* func);
+	FunctionClass(std::string ret, std::string name, CallingConvention conv, void* func);
 
 	///
 	/// Returns the function name
@@ -228,6 +241,11 @@ public:
 	/// Decomposes the function into an equivalent string
 	///
 	std::string decompose();
+
+	///
+	/// Gets the function calling convention
+	///
+	CallingConvention convention();
 
 };
 
@@ -337,25 +355,6 @@ protected:
 	/// Method that must be implemented by the exporter
 	virtual void finish(Script& instance) = 0;
 
-public:
-	///
-	/// Adds a new exported entry to the queue
-	///
-	C& operator()(T entry)
-	{
-		this->_entries.push(entry);
-		return (C&)(*this);
-	}
-
-	///
-	/// Adds a new exported entry to the queue
-	///
-	C& def(T entry)
-	{
-		this->_entries.push(entry);
-		return (C&)(*this);
-	}
-
 };
 
 ///
@@ -374,10 +373,348 @@ protected:
 	///
 	FunctionExporter();
 
+public:
+
+	///
+	/// Templated function exporters
+	///
+
+	template<typename R>
+	FunctionExporter& def(std::string name, R(__stdcall *func)())
+	{
+		FunctionClass function(Type<R>::toString(), name, CallStdcall, func);
+
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R>
+	FunctionExporter& def(std::string name, R(__cdecl *func)())
+	{
+		FunctionClass function(Type<R>::toString(), name, CallCdecl, func);
+
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R, typename A1>
+	FunctionExporter& def(std::string name, R(__stdcall *func)(A1))
+	{
+		FunctionClass function(Type<R>::toString(), name, CallStdcall, func);
+		AB_PUSH_ARG(A1); 
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R, typename A1>
+	FunctionExporter& def(std::string name, R(__cdecl *func)(A1))
+	{
+		FunctionClass function(Type<R>::toString(), name, CallCdecl, func);
+		AB_PUSH_ARG(A1); 
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R, typename A1, typename A2>
+	FunctionExporter& def(std::string name, R(__stdcall *func)(A1, A2))
+	{
+		FunctionClass function(Type<R>::toString(), name, CallStdcall, func);
+		AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); 
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R, typename A1, typename A2>
+	FunctionExporter& def(std::string name, R(__cdecl *func)(A1, A2))
+	{
+		FunctionClass function(Type<R>::toString(), name, CallCdecl, func);
+		AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); 
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R, typename A1, typename A2, typename A3>
+	FunctionExporter& def(std::string name, R(__stdcall *func)(A1, A2, A3))
+	{
+		FunctionClass function(Type<R>::toString(), name, CallStdcall, func);
+		AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); 
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R, typename A1, typename A2, typename A3>
+	FunctionExporter& def(std::string name, R(__cdecl *func)(A1, A2, A3))
+	{
+		FunctionClass function(Type<R>::toString(), name, CallCdecl, func);
+		AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); 
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R, typename A1, typename A2, typename A3, typename A4>
+	FunctionExporter& def(std::string name, R(__stdcall *func)(A1, A2, A3, A4))
+	{
+		FunctionClass function(Type<R>::toString(), name, CallStdcall, func);
+		AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); 
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R, typename A1, typename A2, typename A3, typename A4>
+	FunctionExporter& def(std::string name, R(__cdecl *func)(A1, A2, A3, A4))
+	{
+		FunctionClass function(Type<R>::toString(), name, CallCdecl, func);
+		AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); 
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5>
+	FunctionExporter& def(std::string name, R(__stdcall *func)(A1, A2, A3, A4, A5))
+	{
+		FunctionClass function(Type<R>::toString(), name, CallStdcall, func);
+		AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); 
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5>
+	FunctionExporter& def(std::string name, R(__cdecl *func)(A1, A2, A3, A4, A5))
+	{
+		FunctionClass function(Type<R>::toString(), name, CallCdecl, func);
+		AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); 
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6>
+	FunctionExporter& def(std::string name, R(__stdcall *func)(A1, A2, A3, A4, A5, A6))
+	{
+		FunctionClass function(Type<R>::toString(), name, CallStdcall, func);
+		AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); AB_PUSH_ARG(A6); 
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6>
+	FunctionExporter& def(std::string name, R(__cdecl *func)(A1, A2, A3, A4, A5, A6))
+	{
+		FunctionClass function(Type<R>::toString(), name, CallCdecl, func);
+		AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); AB_PUSH_ARG(A6); 
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7>
+	FunctionExporter& def(std::string name, R(__stdcall *func)(A1, A2, A3, A4, A5, A6, A7))
+	{
+		FunctionClass function(Type<R>::toString(), name, CallStdcall, func);
+		AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); AB_PUSH_ARG(A6); AB_PUSH_ARG(A7); 
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7>
+	FunctionExporter& def(std::string name, R(__cdecl *func)(A1, A2, A3, A4, A5, A6, A7))
+	{
+		FunctionClass function(Type<R>::toString(), name, CallCdecl, func);
+		AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); AB_PUSH_ARG(A6); AB_PUSH_ARG(A7); 
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8>
+	FunctionExporter& def(std::string name, R(__stdcall *func)(A1, A2, A3, A4, A5, A6, A7, A8))
+	{
+		FunctionClass function(Type<R>::toString(), name, CallStdcall, func);
+		AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); AB_PUSH_ARG(A6); AB_PUSH_ARG(A7); AB_PUSH_ARG(A8); 
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8>
+	FunctionExporter& def(std::string name, R(__cdecl *func)(A1, A2, A3, A4, A5, A6, A7, A8))
+	{
+		FunctionClass function(Type<R>::toString(), name, CallCdecl, func);
+		AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); AB_PUSH_ARG(A6); AB_PUSH_ARG(A7); AB_PUSH_ARG(A8); 
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9>
+	FunctionExporter& def(std::string name, R(__stdcall *func)(A1, A2, A3, A4, A5, A6, A7, A8, A9))
+	{
+		FunctionClass function(Type<R>::toString(), name, CallStdcall, func);
+		AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); AB_PUSH_ARG(A6); AB_PUSH_ARG(A7); AB_PUSH_ARG(A8); AB_PUSH_ARG(A9); 
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9>
+	FunctionExporter& def(std::string name, R(__cdecl *func)(A1, A2, A3, A4, A5, A6, A7, A8, A9))
+	{
+		FunctionClass function(Type<R>::toString(), name, CallCdecl, func);
+		AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); AB_PUSH_ARG(A6); AB_PUSH_ARG(A7); AB_PUSH_ARG(A8); AB_PUSH_ARG(A9); 
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10>
+	FunctionExporter& def(std::string name, R(__stdcall *func)(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10))
+	{
+		FunctionClass function(Type<R>::toString(), name, CallStdcall, func);
+		AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); AB_PUSH_ARG(A6); AB_PUSH_ARG(A7); AB_PUSH_ARG(A8); AB_PUSH_ARG(A9); AB_PUSH_ARG(A10); 
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10>
+	FunctionExporter& def(std::string name, R(__cdecl *func)(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10))
+	{
+		FunctionClass function(Type<R>::toString(), name, CallCdecl, func);
+		AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); AB_PUSH_ARG(A6); AB_PUSH_ARG(A7); AB_PUSH_ARG(A8); AB_PUSH_ARG(A9); AB_PUSH_ARG(A10); 
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10, typename A11>
+	FunctionExporter& def(std::string name, R(__stdcall *func)(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11))
+	{
+		FunctionClass function(Type<R>::toString(), name, CallStdcall, func);
+		AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); AB_PUSH_ARG(A6); AB_PUSH_ARG(A7); AB_PUSH_ARG(A8); AB_PUSH_ARG(A9); AB_PUSH_ARG(A10); AB_PUSH_ARG(A11); 
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10, typename A11>
+	FunctionExporter& def(std::string name, R(__cdecl *func)(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11))
+	{
+		FunctionClass function(Type<R>::toString(), name, CallCdecl, func);
+		AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); AB_PUSH_ARG(A6); AB_PUSH_ARG(A7); AB_PUSH_ARG(A8); AB_PUSH_ARG(A9); AB_PUSH_ARG(A10); AB_PUSH_ARG(A11); 
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10, typename A11, typename A12>
+	FunctionExporter& def(std::string name, R(__stdcall *func)(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12))
+	{
+		FunctionClass function(Type<R>::toString(), name, CallStdcall, func);
+		AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); AB_PUSH_ARG(A6); AB_PUSH_ARG(A7); AB_PUSH_ARG(A8); AB_PUSH_ARG(A9); AB_PUSH_ARG(A10); AB_PUSH_ARG(A11); AB_PUSH_ARG(A12); 
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10, typename A11, typename A12>
+	FunctionExporter& def(std::string name, R(__cdecl *func)(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12))
+	{
+		FunctionClass function(Type<R>::toString(), name, CallCdecl, func);
+		AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); AB_PUSH_ARG(A6); AB_PUSH_ARG(A7); AB_PUSH_ARG(A8); AB_PUSH_ARG(A9); AB_PUSH_ARG(A10); AB_PUSH_ARG(A11); AB_PUSH_ARG(A12); 
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10, typename A11, typename A12, typename A13>
+	FunctionExporter& def(std::string name, R(__stdcall *func)(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13))
+	{
+		FunctionClass function(Type<R>::toString(), name, CallStdcall, func);
+		AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); AB_PUSH_ARG(A6); AB_PUSH_ARG(A7); AB_PUSH_ARG(A8); AB_PUSH_ARG(A9); AB_PUSH_ARG(A10); AB_PUSH_ARG(A11); AB_PUSH_ARG(A12); AB_PUSH_ARG(A13); 
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10, typename A11, typename A12, typename A13>
+	FunctionExporter& def(std::string name, R(__cdecl *func)(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13))
+	{
+		FunctionClass function(Type<R>::toString(), name, CallCdecl, func);
+		AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); AB_PUSH_ARG(A6); AB_PUSH_ARG(A7); AB_PUSH_ARG(A8); AB_PUSH_ARG(A9); AB_PUSH_ARG(A10); AB_PUSH_ARG(A11); AB_PUSH_ARG(A12); AB_PUSH_ARG(A13); 
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10, typename A11, typename A12, typename A13, typename A14>
+	FunctionExporter& def(std::string name, R(__stdcall *func)(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14))
+	{
+		FunctionClass function(Type<R>::toString(), name, CallStdcall, func);
+		AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); AB_PUSH_ARG(A6); AB_PUSH_ARG(A7); AB_PUSH_ARG(A8); AB_PUSH_ARG(A9); AB_PUSH_ARG(A10); AB_PUSH_ARG(A11); AB_PUSH_ARG(A12); AB_PUSH_ARG(A13); AB_PUSH_ARG(A14); 
+		this->_entries.push(function);
+		return *this;
+	}
+
+	template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10, typename A11, typename A12, typename A13, typename A14>
+	FunctionExporter& def(std::string name, R(__cdecl *func)(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14))
+	{
+		FunctionClass function(Type<R>::toString(), name, CallCdecl, func);
+		AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); AB_PUSH_ARG(A6); AB_PUSH_ARG(A7); AB_PUSH_ARG(A8); AB_PUSH_ARG(A9); AB_PUSH_ARG(A10); AB_PUSH_ARG(A11); AB_PUSH_ARG(A12); AB_PUSH_ARG(A13); AB_PUSH_ARG(A14); 
+		this->_entries.push(function);
+		return *this;
+	}
+
+
 	///
 	/// Called when registering is needed.
 	///
 	virtual void finish(Script& instance);
+
+};
+
+///
+/// StructMember struct
+///
+typedef struct StructMember_t
+{
+	/// Name of the member
+	std::string name;
+
+	/// Name of the member
+	std::string type;
+
+	/// Offset of the member
+	int offset;
+} 
+StructMember, StructMemberPtr;
+
+///
+/// StructExporter export container
+///
+class StructExporter
+	: public BaseExporter<StructExporter, StructMember>
+{
+
+	/// Friend exporter class
+	friend class Exporter;
+
+private:
+	/// Type name
+	std::string _name;
+
+	/// Struct size
+	int _size;
+
+protected:
+	///
+	/// Struct exporter
+	///
+	StructExporter(std::string name, int size);
+
+	///
+	/// Called when registering is needed.
+	///
+	virtual void finish(Script& instance);
+
+public:
+	///
+	/// Registers a member of the struct
+	///
+	template<typename T, typename S>
+	StructExporter& member(std::string name, T S::*offset)
+	{
+		StructMember m;
+		m.name = name;
+		m.offset = *(int*)&offset;
+		m.type = Type<T>::toString();
+		this->_entries.push(m);
+		return *this;
+	}
 
 };
 
@@ -403,140 +740,36 @@ public:
 	static Exporter Export( Script& script );
 
 	///
-	/// BaseExporter wrapper
+	/// FunctionExporter wrapper
 	///
 	static FunctionExporter Functions();
 
 	///
+	/// StructExporter
+	///
+	template<typename T>
+	static StructExporter Struct()
+	{
+		StructExporter instance(Type<T>::toString(), sizeof(T));
+		return instance;
+	}
+
+	///
 	/// Exports the functions
 	///
-	void operator[](FunctionExporter& funcs)
+	void operator[] (FunctionExporter& funcs)
 	{
 		funcs.finish(this->_script);
 	}
 
+	///
+	/// Exports the functions
+	///
+	void operator[] (StructExporter& structs)
+	{
+		structs.finish(this->_script);
+	}
+
 };
-
-///
-/// Function class wrappers
-///
-template<typename R>
-static FunctionClass Function(std::string name, R(*func)())
-{
-	FunctionClass function(Type<R>::toString(), name, func);
-	return function;
-}
-
-template<typename R, typename A1>
-static FunctionClass Function(std::string name, R(*func)(A1))
-{
-	FunctionClass function(Type<R>::toString(), name, func);
-	AB_PUSH_ARG(A1); 
-	return function;
-}
-
-template<typename R, typename A1, typename A2>
-static FunctionClass Function(std::string name, R(*func)(A1, A2))
-{
-	FunctionClass function(Type<R>::toString(), name, func);
-	AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); 
-	return function;
-}
-
-template<typename R, typename A1, typename A2, typename A3>
-static FunctionClass Function(std::string name, R(*func)(A1, A2, A3))
-{
-	FunctionClass function(Type<R>::toString(), name, func);
-	AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); 
-	return function;
-}
-
-template<typename R, typename A1, typename A2, typename A3, typename A4>
-static FunctionClass Function(std::string name, R(*func)(A1, A2, A3, A4))
-{
-	FunctionClass function(Type<R>::toString(), name, func);
-	AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); 
-	return function;
-}
-
-template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5>
-static FunctionClass Function(std::string name, R(*func)(A1, A2, A3, A4, A5))
-{
-	FunctionClass function(Type<R>::toString(), name, func);
-	AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); 
-	return function;
-}
-
-template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6>
-static FunctionClass Function(std::string name, R(*func)(A1, A2, A3, A4, A5, A6))
-{
-	FunctionClass function(Type<R>::toString(), name, func);
-	AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); AB_PUSH_ARG(A6); 
-	return function;
-}
-
-template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7>
-static FunctionClass Function(std::string name, R(*func)(A1, A2, A3, A4, A5, A6, A7))
-{
-	FunctionClass function(Type<R>::toString(), name, func);
-	AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); AB_PUSH_ARG(A6); AB_PUSH_ARG(A7); 
-	return function;
-}
-
-template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8>
-static FunctionClass Function(std::string name, R(*func)(A1, A2, A3, A4, A5, A6, A7, A8))
-{
-	FunctionClass function(Type<R>::toString(), name, func);
-	AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); AB_PUSH_ARG(A6); AB_PUSH_ARG(A7); AB_PUSH_ARG(A8); 
-	return function;
-}
-
-template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9>
-static FunctionClass Function(std::string name, R(*func)(A1, A2, A3, A4, A5, A6, A7, A8, A9))
-{
-	FunctionClass function(Type<R>::toString(), name, func);
-	AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); AB_PUSH_ARG(A6); AB_PUSH_ARG(A7); AB_PUSH_ARG(A8); AB_PUSH_ARG(A9); 
-	return function;
-}
-
-template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10>
-static FunctionClass Function(std::string name, R(*func)(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10))
-{
-	FunctionClass function(Type<R>::toString(), name, func);
-	AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); AB_PUSH_ARG(A6); AB_PUSH_ARG(A7); AB_PUSH_ARG(A8); AB_PUSH_ARG(A9); AB_PUSH_ARG(A10); 
-	return function;
-}
-
-template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10, typename A11>
-static FunctionClass Function(std::string name, R(*func)(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11))
-{
-	FunctionClass function(Type<R>::toString(), name, func);
-	AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); AB_PUSH_ARG(A6); AB_PUSH_ARG(A7); AB_PUSH_ARG(A8); AB_PUSH_ARG(A9); AB_PUSH_ARG(A10); AB_PUSH_ARG(A11); 
-	return function;
-}
-
-template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10, typename A11, typename A12>
-static FunctionClass Function(std::string name, R(*func)(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12))
-{
-	FunctionClass function(Type<R>::toString(), name, func);
-	AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); AB_PUSH_ARG(A6); AB_PUSH_ARG(A7); AB_PUSH_ARG(A8); AB_PUSH_ARG(A9); AB_PUSH_ARG(A10); AB_PUSH_ARG(A11); AB_PUSH_ARG(A12); 
-	return function;
-}
-
-template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10, typename A11, typename A12, typename A13>
-static FunctionClass Function(std::string name, R(*func)(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13))
-{
-	FunctionClass function(Type<R>::toString(), name, func);
-	AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); AB_PUSH_ARG(A6); AB_PUSH_ARG(A7); AB_PUSH_ARG(A8); AB_PUSH_ARG(A9); AB_PUSH_ARG(A10); AB_PUSH_ARG(A11); AB_PUSH_ARG(A12); AB_PUSH_ARG(A13); 
-	return function;
-}
-
-template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10, typename A11, typename A12, typename A13, typename A14>
-static FunctionClass Function(std::string name, R(*func)(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14))
-{
-	FunctionClass function(Type<R>::toString(), name, func);
-	AB_PUSH_ARG(A1); AB_PUSH_ARG(A2); AB_PUSH_ARG(A3); AB_PUSH_ARG(A4); AB_PUSH_ARG(A5); AB_PUSH_ARG(A6); AB_PUSH_ARG(A7); AB_PUSH_ARG(A8); AB_PUSH_ARG(A9); AB_PUSH_ARG(A10); AB_PUSH_ARG(A11); AB_PUSH_ARG(A12); AB_PUSH_ARG(A13); AB_PUSH_ARG(A14); 
-	return function;
-}
 
 AB_END_NAMESPACE

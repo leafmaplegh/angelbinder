@@ -1,7 +1,6 @@
 // AngelBindTest.cpp : Defines the entry point for the console application.
 //
 #include "stdafx.h"
-#include <LibObs/observers.h>
 #include <scriptstdstring/scriptstdstring.h>
 
 #include <iostream>
@@ -14,7 +13,6 @@ using namespace std;
 //
 
 //#define AB_USE_NAMESPACE
-#define AB_USE_EVENTSYSTEM
 
 ///
 /// 1st step: include the header.
@@ -22,9 +20,50 @@ using namespace std;
 #include <AngelBinder.h>
 
 //
-// 2nd step: 
+// "use" the namespace of AngelBinder or you'll need to type alot of 
+// "AngelBinder::" before the functions
+//
+
+using namespace AngelBinder;
+
+///
+/// Exported function/object prototypes. Implementation in the end of the 
+/// file, to keep the example clear.
+///
+
+typedef struct {
+	int member1;
+	unsigned int member2;
+} TestClass;
+
+int sum(int a, int b)
+{
+	return a + b;
+}
+
+int subtract(int a, int b)
+{
+	return a - b;
+}
+
+int multiply(int a, int b)
+{
+	return a / b;
+}
+
+int divide(int a, int b)
+{
+	return a / b;
+}
+
+void log(std::string message)
+{
+	cout << "[Script Log] " << message << endl;
+}
+
+//
 // Translates all the types you need to be different 
-// from its name, or that is contained in a namespace.
+// from its name, that is contained in a namespace, or for structs.
 // 
 // if I define, MyClass this way, it doesn't need to be translated:
 // 
@@ -45,25 +84,18 @@ using namespace std;
 //
 // with AB_TRANSLATE_TYPE(MyNamespace::MyClass, "MyClass")
 //
-
-AB_TRANSLATE_TYPE(std::string, "MyClass")
-
+// structs also needs to be translated, or you'll get excpetions 
+// when exporting them.
+// 
+// typedef struct {
+//   int x;
+// } MyStruct;
 //
-// 3rd step:
-// "use" the namespace of AngelBinder or you'll need to type alot of 
-// "AngelBinder::" before the functions
+// AB_TRANSLATE_TYPE(MyStruct, "MyStruct")
 //
 
-using namespace AngelBinder;
-
-///
-/// Exported function prototypes. Implementation in the end of the 
-/// file, to keep the example clear.
-///
-
-void test1();
-void test2();
-void test3();
+AB_TRANSLATE_TYPE(TestClass, "test")
+AB_TRANSLATE_TYPE(std::string, "string")
 
 ///
 /// Message event handler
@@ -85,13 +117,12 @@ int main(int argc, char* argv[])
 	/// Declares the script engine instance
 	///
 
-	Script script("MyModuleName");
+	Script script("script");
 
 	///
 	/// Setup the message outputs if you want to
 	///
 
-	/// This way if not using libobs.
 	script.messages() = &onScriptMessage;
 
 	///
@@ -99,6 +130,17 @@ int main(int argc, char* argv[])
 	///
 
 	RegisterStdString(&script.engine());
+
+	///
+	/// Exports your structs to the script
+	///
+
+	Exporter::Export(script)
+	[
+		Exporter::Struct<TestClass>()
+			.member("member1", &TestClass::member1) // registers as int on offset 0
+			.member("member2", &TestClass::member2) // registers as unsigned int on offset 4
+	];
 
 	///
 	/// Exports your functions to the script
@@ -113,9 +155,10 @@ int main(int argc, char* argv[])
 	Exporter::Export(script)
 	[
 		Exporter::Functions()
-			.def(Function("test1", &test1)) 
-			.def(Function("test2", &test2))
-			.def(Function("test3", &test3))
+			.def("sum", &sum) 
+			.def("subtract", &subtract)
+			.def("multiply", &multiply)
+			.def("divide", &divide)
 	];
 
 	///  ---------- Planned "TODO" list Below ------------- 
@@ -123,30 +166,22 @@ int main(int argc, char* argv[])
 	/*
 
 	Exporter::Export(script)
-		[
-			Exporter::Struct<MyStruct>()
-				.member("member1", MyStruct::member1)
-				.member("member1", MyStruct::member1)
-				.member("member1", MyStruct::member1)
-		];
+	[
+		Exporter::Class<MyClass>()
+			.constructor()
+			.constructor<int>()
+			.method("method1", &MyClass::method1)
+			.method("method2", &MyClass::method2)
+			.property("property1", &MyClass::getProperty1, &MyClass::setProperty1)
+			.property("property2", &MyClass::getProperty2, &MyClass::setProperty2)
+	];
 
 	Exporter::Export(script)
-		[
-			Exporter::Class<MyClass>()
-				.constructor()
-				.constructor<int>()
-				.method("method1", &MyClass::method1)
-				.method("method2", &MyClass::method2)
-				.property("property1", &MyClass::getProperty1, &MyClass::setProperty1)
-				.property("property2", &MyClass::getProperty2, &MyClass::setProperty2)
-		];
-
-	Exporter::Export(script)
-		[
-			Exporter::Globals()
+	[
+		Exporter::Globals()
 			.def("name", &global_variable1)
 			.def("name", &global_variable2)
-		];
+	];
 
 	*/
 
@@ -164,17 +199,4 @@ int main(int argc, char* argv[])
 /// Implementations
 ///
 
-void test1()
-{
-	cout << "Hello, ";
-}
 
-void test2()
-{
-	cout << "World!";
-}
-
-void test3()
-{
-	cout << "\n";
-}

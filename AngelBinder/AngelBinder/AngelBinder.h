@@ -220,6 +220,9 @@ private:
 	void* _func;
 
 public:
+	///
+	/// FunctionClass constructor
+	///
 	FunctionClass(std::string ret, std::string name, CallingConvention conv, void* func);
 
 	///
@@ -246,6 +249,49 @@ public:
 	/// Gets the function calling convention
 	///
 	CallingConvention convention();
+
+};
+
+///
+/// VariableExporter parser
+///
+class VariableClass
+{
+private:
+	/// Type of the variable
+	std::string _type;
+
+	/// Name of the variable
+	std::string _name;
+
+	/// Address of the variable
+	void* _address;
+
+public:
+	///
+	/// Constructs a variable class
+	///
+	VariableClass(std::string type, std::string name, void* address);
+
+	///
+	/// Returns the name of this variable
+	///
+	std::string name();
+
+	///
+	/// Returns the type of this variable
+	///
+	std::string type();
+
+	///
+	/// Decomposes the exported variable into an equivalent string
+	///
+	std::string decompose();
+
+	///
+	/// Returns the address of the variable
+	///
+	void* address();
 
 };
 
@@ -327,7 +373,7 @@ public:
 	bool compileFile(std::string file);
 
 	///
-	/// Script text Ccompiler
+	/// Script text compiler
 	///
 	bool compileScript(std::string script);
 
@@ -358,6 +404,39 @@ protected:
 };
 
 ///
+/// Global variable exporter
+///
+class VariableExporter
+	: public BaseExporter<VariableExporter, VariableClass>
+{
+
+	/// Friend exporter class
+	friend class Exporter;
+
+protected:
+	///
+	/// Variable exporter 
+	///
+	VariableExporter();
+
+	///
+	/// Called when registering is needed.
+	///
+	virtual void finish(Script& instance);
+
+public:
+	template<typename T>
+	VariableExporter& def(std::string name, T* address)
+	{
+		VariableClass var(Type<T>::toString(), name, address);
+		this->_entries.push(var);
+		return *this;
+	}
+
+};
+
+
+///
 /// FunctionClass export container
 ///
 class FunctionExporter 
@@ -373,8 +452,12 @@ protected:
 	///
 	FunctionExporter();
 
-public:
+	///
+	/// Called when registering is needed.
+	///
+	virtual void finish(Script& instance);
 
+public:
 	///
 	/// Templated function exporters
 	///
@@ -383,7 +466,6 @@ public:
 	FunctionExporter& def(std::string name, R(__stdcall *func)())
 	{
 		FunctionClass function(Type<R>::toString(), name, CallStdcall, func);
-
 		this->_entries.push(function);
 		return *this;
 	}
@@ -392,7 +474,6 @@ public:
 	FunctionExporter& def(std::string name, R(__cdecl *func)())
 	{
 		FunctionClass function(Type<R>::toString(), name, CallCdecl, func);
-
 		this->_entries.push(function);
 		return *this;
 	}
@@ -649,12 +730,6 @@ public:
 		return *this;
 	}
 
-
-	///
-	/// Called when registering is needed.
-	///
-	virtual void finish(Script& instance);
-
 };
 
 ///
@@ -745,6 +820,11 @@ public:
 	static FunctionExporter Functions();
 
 	///
+	/// VariableExporter wrapper
+	///
+	static VariableExporter Variables();
+
+	///
 	/// StructExporter
 	///
 	template<typename T>
@@ -768,6 +848,14 @@ public:
 	void operator[] (StructExporter& structs)
 	{
 		structs.finish(this->_script);
+	}
+
+	///
+	/// Exports the functions
+	///
+	void operator[] (VariableExporter& vars)
+	{
+		vars.finish(this->_script);
 	}
 
 };

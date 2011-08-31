@@ -27,14 +27,18 @@ using namespace std;
 using namespace AngelBinder;
 
 ///
-/// Exported function/object prototypes. Implementation in the end of the 
-/// file, to keep the example clear.
+/// Exported function/object prototypes.
 ///
 
 typedef struct {
 	int member1;
 	unsigned int member2;
 } TestClass;
+
+int				g_var1;
+unsigned int	g_var2;
+short			g_var3;
+std::string		g_var4;
 
 int sum(int a, int b)
 {
@@ -132,7 +136,7 @@ int main(int argc, char* argv[])
 	RegisterStdString(&script.engine());
 
 	///
-	/// Exports your structs to the script
+	/// Exports your structures to the script
 	///
 
 	Exporter::Export(script)
@@ -143,13 +147,20 @@ int main(int argc, char* argv[])
 	];
 
 	///
-	/// Exports your functions to the script
+	/// Exports your global variables to the script
 	///
-	/// alternative syntax
-	/// Exporter::Functions()
-	///	   (Function("test1", &test1)) 
-	///	   (Function("test2", &test2))
-	///	   (Function("test3", &test3))
+
+	Exporter::Export(script)
+	[
+		Exporter::Variables()
+			.def("g_int", &g_var1)
+			.def("g_uint", &g_var2)
+			.def("g_short", &g_var3)
+			.def("g_string", &g_var4)
+	];
+
+	///
+	/// Exports your global functions to the script
 	///
 
 	Exporter::Export(script)
@@ -174,13 +185,6 @@ int main(int argc, char* argv[])
 			.method("method2", &MyClass::method2)
 			.property("property1", &MyClass::getProperty1, &MyClass::setProperty1)
 			.property("property2", &MyClass::getProperty2, &MyClass::setProperty2)
-	];
-
-	Exporter::Export(script)
-	[
-		Exporter::Globals()
-			.def("name", &global_variable1)
-			.def("name", &global_variable2)
 	];
 
 	*/

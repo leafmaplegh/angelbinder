@@ -176,6 +176,12 @@ AngelBinder::FunctionExporter Exporter::Functions()
 	return exporter;
 }
 
+AngelBinder::VariableExporter Exporter::Variables()
+{
+	VariableExporter exporter;
+	return exporter;
+}
+
 void FunctionExporter::finish( Script& instance )
 {
 	while(!this->_entries.empty())
@@ -255,6 +261,48 @@ void StructExporter::finish( Script& instance )
 		AB_SCRIPT_ASSERT_STATIC(r >= 0, std::string("Error registering member '" + this->_name + "::" + memb.name + "'").c_str(), AB_THROW, &instance);
 		this->_entries.pop();
 	}
+}
+
+VariableExporter::VariableExporter()
+{
+}
+
+void VariableExporter::finish( Script& instance )
+{
+	while(!this->_entries.empty())
+	{
+		VariableClass memb = this->_entries.front();
+		AB_MESSAGE_INVOKE_STATIC(&instance, &instance, "Registering global var '" + memb.name() + "' as '" + memb.type() + "'");
+		int r = instance.engine().RegisterGlobalProperty(memb.decompose().c_str(), memb.address());
+		AB_SCRIPT_ASSERT_STATIC(r >= 0, std::string("Error registering global var '" + memb.name() + "'").c_str(), AB_THROW, &instance);
+		this->_entries.pop();
+	}
+}
+
+VariableClass::VariableClass( std::string type, std::string name, void* address ) 
+	: _type(type), _address(address), _name(name)
+{
+}
+
+std::string VariableClass::decompose()
+{
+	std::string ret = this->_type + " " + this->_name;
+	return ret;
+}
+
+void* VariableClass::address()
+{
+	return this->_address;
+}
+
+std::string VariableClass::name()
+{
+	return this->_name;
+}
+
+std::string VariableClass::type()
+{
+	return this->_type;
 }
 
 AB_END_NAMESPACE

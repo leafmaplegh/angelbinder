@@ -386,32 +386,17 @@ private:
 };
 
 ///
-/// Generic exporter
-///
-template<typename C, typename T>
-class BaseExporter
-{	
-	/// Friend class to call 
-	friend class Exporter;
-
-protected:
-	/// Stores all exported entries
-	std::queue<T> _entries;
-
-	/// Method that must be implemented by the exporter
-	virtual void finish(Script& instance) = 0;
-
-};
-
-///
 /// Global variable exporter
 ///
 class VariableExporter
-	: public BaseExporter<VariableExporter, VariableClass>
 {
 
 	/// Friend exporter class
 	friend class Exporter;
+
+protected:
+	/// Stores all exported entries
+	std::queue<VariableClass> _entries;
 
 protected:
 	///
@@ -422,7 +407,7 @@ protected:
 	///
 	/// Called when registering is needed.
 	///
-	virtual void finish(Script& instance);
+	void finish(Script& instance);
 
 public:
 	template<typename T>
@@ -440,11 +425,14 @@ public:
 /// FunctionClass export container
 ///
 class FunctionExporter 
-	: public BaseExporter<FunctionExporter, FunctionClass>
 {
 
 	/// Friend exporter class
 	friend class Exporter;
+
+protected:
+	/// Stores all exported entries
+	std::queue<FunctionClass> _entries;
 
 protected:
 	///
@@ -455,7 +443,7 @@ protected:
 	///
 	/// Called when registering is needed.
 	///
-	virtual void finish(Script& instance);
+	void finish(Script& instance);
 
 public:
 	///
@@ -735,7 +723,7 @@ public:
 ///
 /// StructMember struct
 ///
-typedef struct StructMember_t
+typedef struct ClassMember_t
 {
 	/// Name of the member
 	std::string name;
@@ -746,48 +734,63 @@ typedef struct StructMember_t
 	/// Offset of the member
 	int offset;
 } 
-StructMember, StructMemberPtr;
+ClassMember, *ClassMemberPtr;
 
 ///
 /// StructExporter export container
 ///
-class StructExporter
-	: public BaseExporter<StructExporter, StructMember>
+class ClassExporter
 {
 
 	/// Friend exporter class
 	friend class Exporter;
 
+protected:
+	/// Stores all exported entries
+	std::queue<ClassMember> _entries;
+
 private:
 	/// Type name
 	std::string _name;
 
-	/// Struct size
+	/// Class size
 	int _size;
+
+	/// Class registering flags
+	int _flags;
 
 protected:
 	///
 	/// Struct exporter
 	///
-	StructExporter(std::string name, int size);
+	ClassExporter(std::string name, int size);
 
 	///
 	/// Called when registering is needed.
 	///
-	virtual void finish(Script& instance);
+	void finish(Script& instance);
 
 public:
 	///
 	/// Registers a member of the struct
 	///
 	template<typename T, typename S>
-	StructExporter& member(std::string name, T S::*offset)
+	ClassExporter& member(std::string name, T S::*offset)
 	{
-		StructMember m;
+		ClassMember m;
 		m.name = name;
 		m.offset = *(int*)&offset;
 		m.type = Type<T>::toString();
 		this->_entries.push(m);
+		return *this;
+	}
+
+	///
+	/// Registers a member of the struct
+	///
+	template<typename T>
+	ClassExporter& ctor(T::*offset)
+	{
 		return *this;
 	}
 
@@ -825,12 +828,12 @@ public:
 	static VariableExporter Variables();
 
 	///
-	/// StructExporter
+	/// ClassExporter 
 	///
 	template<typename T>
-	static StructExporter Struct()
+	static ClassExporter Class()
 	{
-		StructExporter instance(Type<T>::toString(), sizeof(T));
+		ClassExporter instance(Type<T>::toString(), sizeof(T));
 		return instance;
 	}
 
@@ -845,7 +848,7 @@ public:
 	///
 	/// Exports the functions
 	///
-	void operator[] (StructExporter& structs)
+	void operator[] (ClassExporter& structs)
 	{
 		structs.finish(this->_script);
 	}

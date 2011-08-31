@@ -141,7 +141,9 @@ int main(int argc, char* argv[])
 
 	Exporter::Export(script)
 	[
-		Exporter::Struct<TestClass>()
+		Exporter::Class<TestClass>()
+			.ctor(&TestClass::TestClass)
+			.dtor(&TestClass::TestClass)
 			.member("member1", &TestClass::member1) // registers as int on offset 0
 			.member("member2", &TestClass::member2) // registers as unsigned int on offset 4
 	];

@@ -30,10 +30,27 @@ using namespace AngelBinder;
 /// Exported function/object prototypes.
 ///
 
-typedef struct {
-	int member1;
-	unsigned int member2;
-} TestClass;
+class MyClass
+{
+private:
+	int test;
+
+public:
+	MyClass()
+		: test(0)
+	{
+	}
+
+	MyClass(int val)
+		: test(val)
+	{
+	}
+
+	~MyClass()
+	{
+	}
+
+};
 
 int				g_var1;
 unsigned int	g_var2;
@@ -98,7 +115,7 @@ void log(std::string message)
 // AB_TRANSLATE_TYPE(MyStruct, "MyStruct")
 //
 
-AB_TRANSLATE_TYPE(TestClass, "test")
+AB_TRANSLATE_TYPE(MyClass, "myclass")
 AB_TRANSLATE_TYPE(std::string, "string")
 
 ///
@@ -116,7 +133,7 @@ void onScriptMessage(Script* script, std::string message)
 
 int main(int argc, char* argv[])
 {
-	
+
 	///
 	/// Declares the script engine instance
 	///
@@ -134,19 +151,6 @@ int main(int argc, char* argv[])
 	///
 
 	RegisterStdString(&script.engine());
-
-	///
-	/// Exports your structures to the script
-	///
-
-	Exporter::Export(script)
-	[
-		Exporter::Class<TestClass>()
-			.ctor(&TestClass::TestClass)
-			.dtor(&TestClass::TestClass)
-			.member("member1", &TestClass::member1) // registers as int on offset 0
-			.member("member2", &TestClass::member2) // registers as unsigned int on offset 4
-	];
 
 	///
 	/// Exports your global variables to the script
@@ -174,6 +178,17 @@ int main(int argc, char* argv[])
 			.def("divide", &divide)
 	];
 
+///
+/// Exports your global classes to the script
+///
+Exporter::Export(script)
+[
+	Exporter::Class<MyClass>()
+		.ctor()
+		.ctor<int>()			
+		.dtor()
+];
+
 	///  ---------- Planned "TODO" list Below ------------- 
 
 	/*
@@ -195,7 +210,7 @@ int main(int argc, char* argv[])
 	/// Compiles a file
 	///
 
- 	script.compileFile("AngelBinder.as");
+ 	script.compile("AngelBinder.as");
 
 	return 0;
 

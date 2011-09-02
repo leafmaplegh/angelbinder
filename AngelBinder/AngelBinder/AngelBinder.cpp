@@ -75,7 +75,7 @@ void Script::uninitialize()
 	this->_engine = NULL;
 }
 
-bool Script::compileFile ( std::string file )
+bool Script::compile ( std::string file )
 {
 	AB_INIT_CHECK()
 	{
@@ -86,24 +86,6 @@ bool Script::compileFile ( std::string file )
 
 		r = this->_builder->AddSectionFromFile(file.c_str()); 
 		AB_SCRIPT_ASSERT(r >= 0, "Could not add script section from file.", AB_THROW);
-
-		r = this->_builder->BuildModule(); 
-		AB_SCRIPT_ASSERT(r >= 0, "Could not build script.", AB_THROW);
-	}
-	return true;
-}
-
-
-bool Script::compileScript ( std::string script )
-{
-	AB_INIT_CHECK()
-	{
-		int r = 0;
-		r = this->_builder->StartNewModule(this->_engine, this->_module.c_str()); 
-		AB_SCRIPT_ASSERT(r >= 0, "Could not start a new script module.", AB_THROW);
-
-		r = this->_builder->AddSectionFromMemory(script.c_str(), this->_module.c_str()); 
-		AB_SCRIPT_ASSERT(r >= 0, "Could not add script section from memory.", AB_THROW);
 
 		r = this->_builder->BuildModule(); 
 		AB_SCRIPT_ASSERT(r >= 0, "Could not build script.", AB_THROW);
@@ -188,7 +170,7 @@ void FunctionExporter::finish( Script& instance )
 	{
 		FunctionClass function = this->_entries.front();
 		std::string decomposition = function.decompose();
-		AB_MESSAGE_INVOKE_STATIC(&instance, &instance, "Register function '" + function.name() + "' as '" + decomposition + "'");
+		AB_MESSAGE_INVOKE_STATIC(&instance, &instance, "Registering function '" + function.name() + "' as '" + decomposition + "'");
 		int r = instance.engine().RegisterGlobalFunction(decomposition.c_str(), asFUNCTION(function.address()), function.convention());
 		AB_SCRIPT_ASSERT_STATIC(r >= 0, std::string("Error registering function '" + function.name() + "'").c_str(), AB_THROW, &instance);
 		this->_entries.pop();
@@ -244,25 +226,6 @@ AngelBinder::CallingConvention FunctionClass::convention()
 	return this->_conv;
 }
 
-ClassExporter::ClassExporter( std::string name, int size ) 
-	: _name(name), _size(size)
-{
-}
-
-void ClassExporter::finish( Script& instance )
-{
-	AB_MESSAGE_INVOKE_STATIC(&instance, &instance, "Registering type '" + this->_name + "'");
-	int r = instance.engine().RegisterObjectType(this->_name.c_str(), this->_size, asOBJ_VALUE | asOBJ_POD);
-	while(!this->_entries.empty())
-	{
-		ClassMember memb = this->_entries.front();
-		AB_MESSAGE_INVOKE_STATIC(&instance, &instance, "Registering member '" + this->_name + "::" + memb.name + "' as '" + memb.type + "'");
-		r = instance.engine().RegisterObjectProperty(this->_name.c_str(), std::string(memb.type + " " + memb.name).c_str(), memb.offset);
-		AB_SCRIPT_ASSERT_STATIC(r >= 0, std::string("Error registering member '" + this->_name + "::" + memb.name + "'").c_str(), AB_THROW, &instance);
-		this->_entries.pop();
-	}
-}
-
 VariableExporter::VariableExporter()
 {
 }
@@ -303,6 +266,14 @@ std::string VariableClass::name()
 std::string VariableClass::type()
 {
 	return this->_type;
+}
+
+void DummyConstructor( void* memory )
+{
+}
+
+void DummyDestructor( void* memory )
+{
 }
 
 AB_END_NAMESPACE

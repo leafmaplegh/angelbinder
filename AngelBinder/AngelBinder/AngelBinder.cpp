@@ -9,58 +9,35 @@
 
 #include <angelbinder.h>
 
-#define AB_INIT_CHECK()		AB_SCRIPT_ASSERT(this->_engine != NULL && this->_builder != NULL, "Script not initialized.", AB_THROW)
-#define AB_UNINIT_CHECK()	AB_SCRIPT_ASSERT(this->_engine == NULL && this->_builder == NULL, "Script already initialized.", AB_THROW)
+#define AB_INIT_CHECK()		AB_SCRIPT_ASSERT(this->_engine != NULL && this->_builder != NULL, "Script not initialized.", AB_THROW, this)
+#define AB_UNINIT_CHECK()	AB_SCRIPT_ASSERT(this->_engine == NULL && this->_builder == NULL, "Script already initialized.", AB_THROW, this)
+
+#ifdef AS_USE_NAMESPACE
+using namespace AngelScript;
+#endif
 
 AB_BEGIN_NAMESPACE
  
 /**
- * Scripts
+ * Engine
  **/
 
-Script::Script()
-	: _engine(NULL),
-	_builder(NULL),
-	_module("script")
-#ifndef AB_USE_EVENTSYSTEM
-	, _messages(false)
-#endif
-{
-	this->initialize();
-}
-
-Script::Script(std::string module)
-	: _engine(NULL),
-	  _builder(NULL),
-	  _module(module)
-#ifndef AB_USE_EVENTSYSTEM
-	, _messages(false)
-#endif
-{
-	this->initialize();
-}
-
-Script::~Script(void)
-{
-	this->uninitialize();
-}
-
-void Script::initialize()
+void Engine::initialize()
 {
 	AB_UNINIT_CHECK()
 	{
 		this->_engine = asCreateScriptEngine(ANGELSCRIPT_VERSION);
-		AB_SCRIPT_ASSERT(this->_engine != NULL, "Could not create AngelScript instance.", AB_THROW);
+		AB_SCRIPT_ASSERT(this->_engine != NULL, "Could not create AngelScript instance.", AB_THROW, this);
 
 		this->_builder = new CScriptBuilder();
-		AB_SCRIPT_ASSERT(this->_builder != NULL, "Could not create CScriptBuilder instance.", AB_THROW);
+		AB_SCRIPT_ASSERT(this->_builder != NULL, "Could not create CScriptBuilder instance.", AB_THROW, this);
 
-		this->_engine->SetMessageCallback(asFUNCTION(&Script::onScriptMessage), this, asCALL_CDECL);
+		this->_engine->SetMessageCallback(asFUNCTION(&Engine::onASMessage), this, asCALL_CDECL);
 		this->_engine->SetEngineProperty(asEP_SCRIPT_SCANNER, 0);
 	}
 }
 
-void Script::uninitialize()
+void Engine::uninitialize()
 {
 	this->_functions.clear();
 	if(this->_builder != NULL)
@@ -75,27 +52,9 @@ void Script::uninitialize()
 	this->_engine = NULL;
 }
 
-bool Script::compile ( std::string file )
+void __cdecl Engine::onASMessage( const asSMessageInfo *msg, void *param )
 {
-	AB_INIT_CHECK()
-	{
-		int r = 0;
-
-		r = this->_builder->StartNewModule(this->_engine, this->_module.c_str()); 
-		AB_SCRIPT_ASSERT(r >= 0, "Could not start a new script module.", AB_THROW);
-
-		r = this->_builder->AddSectionFromFile(file.c_str()); 
-		AB_SCRIPT_ASSERT(r >= 0, "Could not add script section from file.", AB_THROW);
-
-		r = this->_builder->BuildModule(); 
-		AB_SCRIPT_ASSERT(r >= 0, "Could not build script.", AB_THROW);
-	}
-	return true;
-}
-
-void Script::onScriptMessage( const asSMessageInfo *msg, void *param )
-{
-	Script* engine = (Script*)param;
+	Engine* engine = (Engine*)param;
 	if(engine != NULL)
 	{
 		std::stringstream stream;
@@ -116,63 +75,130 @@ void Script::onScriptMessage( const asSMessageInfo *msg, void *param )
 	}
 }
 
-Engine& Script::engine()
+Engine::Engine()
+	: _builder(NULL), _engine(NULL), _messages(NULL)
 {
-	AB_INIT_CHECK()
-	{
-		return *this->_engine;
-	}
+	this->initialize();
 }
 
-Builder& Script::builder()
+Engine::~Engine()
 {
-	AB_INIT_CHECK()
-	{
-		return *this->_builder;
-	}
+	this->uninitialize();
 }
 
-Script::MessageCallback& Script::messages()
+ASEngine* Engine::asEngine()
+{
+	return this->_engine;
+}
+
+ASBuilder* Engine::asBuilder()
+{
+	return this->_builder;
+}
+
+Engine::MessageCallback& Engine::onMessage()
 {
 	return this->_messages;
+}
+
+Module* Engine::CreateModule( std::string name )
+{
+	std::hash_map<std::string, Module*>::iterator it = this->_modules.find(name);
+	if(it != this->_modules.end())
+	{
+		return it->second;
+	}
+	Module* module = new Module(*this, name);
+	if(module == NULL)
+	{
+		throw std::exception("Couldn't create script module instance.");
+	}
+	this->_modules[name] = module;
+	return module;
+}
+
+Module* Engine::GetModule( std::string name )
+{
+	std::hash_map<std::string, Module*>::iterator it = this->_modules.find(name);
+	if(it != this->_modules.end())
+	{
+		return it->second;
+	}
+	else
+	{
+		throw std::exception("Couldn't create script module instance.");
+	}
+}
+
+/**
+ * Script Module
+ **/
+
+Module::Module(Engine& engine, std::string module)
+	: _engine(engine), _name(module)
+{
+	int r = this->_engine.asBuilder()->StartNewModule(this->_engine.asEngine(), this->_name.c_str());
+	AB_SCRIPT_ASSERT(r >= 0, "Failed to create new script module.", AB_THROW, &engine);
+}
+
+Module::~Module(void)
+{
+}
+
+bool Module::compile ( std::string file )
+{
+	int r = 0;
+
+	r = this->_engine.asBuilder()->AddSectionFromFile(file.c_str()); 
+	AB_SCRIPT_ASSERT(r >= 0, "Could not add script section from file.", AB_THROW, &this->_engine);
+
+	r = this->_engine.asBuilder()->BuildModule(); 
+	AB_SCRIPT_ASSERT(r >= 0, "Could not build script.", AB_THROW, &this->_engine);
+
+	return true;
+}
+
+Engine& Module::engine()
+{
+	return this->_engine;
 }
 
 /**
  * Extras
  **/
 
-Exporter::Exporter( Script& script ) 
-	: _script(script)
+Exporter::Exporter( Module& module ) 
+	: _module(module)
 {
 }
 
-AngelBinder::Exporter Exporter::Export( Script& script )
+Exporter Exporter::Export( Module* module )
 {
-	Exporter exporter(script);
+	Exporter exporter(*module);
 	return exporter;
 }
 
-AngelBinder::FunctionExporter Exporter::Functions()
+FunctionExporter Exporter::Functions()
 {
 	FunctionExporter exporter;
 	return exporter;
 }
 
-AngelBinder::VariableExporter Exporter::Variables()
+VariableExporter Exporter::Variables()
 {
 	VariableExporter exporter;
 	return exporter;
 }
 
-void FunctionExporter::finish( Script& instance )
+void FunctionExporter::finish( Module& instance )
 {
 	while(!this->_entries.empty())
 	{
 		FunctionClass function = this->_entries.front();
 		std::string decomposition = function.decompose();
-		AB_MESSAGE_INVOKE_STATIC(&instance, &instance, "Registering function '" + function.name() + "' as '" + decomposition + "'");
-		int r = instance.engine().RegisterGlobalFunction(decomposition.c_str(), asFUNCTION(function.address()), function.convention());
-		AB_SCRIPT_ASSERT_STATIC(r >= 0, std::string("Error registering function '" + function.name() + "'").c_str(), AB_THROW, &instance);
+		AB_MESSAGE_INVOKE_STATIC(&instance.engine(), &instance.engine(), "Registering function '" + function.name() + "' as '" + decomposition + "'");
+		int r = instance.engine().asEngine()->RegisterGlobalFunction(decomposition.c_str(), function.address(), function.convention());
+		AB_SCRIPT_ASSERT(r >= 0, std::string("Error registering function '" + function.name() + "'").c_str(), AB_THROW, &instance.engine());
 		this->_entries.pop();
 	}
 }
@@ -201,7 +227,7 @@ std::string FunctionClass::decompose()
 	return stream.str();
 }
 
-void* FunctionClass::address()
+asSFuncPtr FunctionClass::address()
 {
 	return this->_func;
 }
@@ -216,12 +242,12 @@ std::string FunctionClass::name()
 	return this->_name;
 }
 
-FunctionClass::FunctionClass( std::string ret, std::string name, CallingConvention conv, void* func ) 
+FunctionClass::FunctionClass( std::string ret, std::string name, CallingConvention conv, asSFuncPtr func ) 
 	: _name(name), _ret(ret), _func(func), _conv(conv)
 {
 }
 
-AngelBinder::CallingConvention FunctionClass::convention()
+CallingConvention FunctionClass::convention()
 {
 	return this->_conv;
 }
@@ -230,14 +256,14 @@ VariableExporter::VariableExporter()
 {
 }
 
-void VariableExporter::finish( Script& instance )
+void VariableExporter::finish( Module& instance )
 {
 	while(!this->_entries.empty())
 	{
 		VariableClass memb = this->_entries.front();
-		AB_MESSAGE_INVOKE_STATIC(&instance, &instance, "Registering global var '" + memb.name() + "' as '" + memb.type() + "'");
-		int r = instance.engine().RegisterGlobalProperty(memb.decompose().c_str(), memb.address());
-		AB_SCRIPT_ASSERT_STATIC(r >= 0, std::string("Error registering global var '" + memb.name() + "'").c_str(), AB_THROW, &instance);
+		AB_MESSAGE_INVOKE_STATIC(&instance.engine(), &instance.engine(), "Registering global var '" + memb.name() + "' as '" + memb.type() + "'");
+		int r = instance.engine().asEngine()->RegisterGlobalProperty(memb.decompose().c_str(), memb.address());
+		AB_SCRIPT_ASSERT(r >= 0, std::string("Error registering global var '" + memb.name() + "'").c_str(), AB_THROW, &instance.engine());
 		this->_entries.pop();
 	}
 }

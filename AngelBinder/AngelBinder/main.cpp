@@ -7,24 +7,15 @@
 #include <string>
 using namespace std;
 
-//
-// 1st step:
-// Configure how you want it.
-//
-
-//#define AB_USE_NAMESPACE
-
 ///
-/// 1st step: include the header.
+/// include the header.
 ///
 #include <AngelBinder.h>
 
-//
-// "use" the namespace of AngelBinder or you'll need to type alot of 
-// "AngelBinder::" before the functions
-//
-
+#ifdef AS_USE_NAMESPACE
+using namespace AngelScript;
 using namespace AngelBinder;
+#endif
 
 ///
 /// Exported function/object prototypes.
@@ -48,6 +39,26 @@ public:
 
 	~MyClass()
 	{
+	}
+
+	void method1()
+	{
+		this->test = 0;
+	}
+
+	int method2()
+	{
+		return rand();
+	}
+
+	void method3(int x)
+	{
+		this->test = x;
+	}
+
+	int method4(int y)
+	{
+		return y * this->test;
 	}
 
 };
@@ -122,7 +133,7 @@ AB_TRANSLATE_TYPE(std::string, "string")
 /// Message event handler
 ///
 
-void onScriptMessage(Script* script, std::string message)
+void onScriptMessage(Engine* script, std::string message)
 {
 	cout << "[Script] " << message << endl;
 }
@@ -135,28 +146,34 @@ int main(int argc, char* argv[])
 {
 
 	///
-	/// Declares the script engine instance
+	/// Declares the engine
 	///
 
-	Script script("script");
+	Engine engine;
+
+	///
+	/// You'll be able to access the basic AngelScript engine and builder
+	///
+
+	RegisterStdString(engine.asEngine());
 
 	///
 	/// Setup the message outputs if you want to
 	///
 
-	script.messages() = &onScriptMessage;
+	engine.onMessage() = &onScriptMessage;
 
 	///
-	/// You'll be able to use the traditional way to type-register
+	/// Declares the module instance
 	///
 
-	RegisterStdString(&script.engine());
+	Module* module = engine.CreateModule("MyModule");
 
 	///
 	/// Exports your global variables to the script
 	///
 
-	Exporter::Export(script)
+	Exporter::Export(module)
 	[
 		Exporter::Variables()
 			.def("g_int", &g_var1)
@@ -169,7 +186,7 @@ int main(int argc, char* argv[])
 	/// Exports your global functions to the script
 	///
 
-	Exporter::Export(script)
+	Exporter::Export(module)
 	[
 		Exporter::Functions()
 			.def("sum", &sum) 
@@ -178,39 +195,28 @@ int main(int argc, char* argv[])
 			.def("divide", &divide)
 	];
 
-///
-/// Exports your global classes to the script
-///
-Exporter::Export(script)
-[
-	Exporter::Class<MyClass>()
-		.ctor()
-		.ctor<int>()			
-		.dtor()
-];
-
-	///  ---------- Planned "TODO" list Below ------------- 
-
-	/*
-
-	Exporter::Export(script)
+	///
+	/// Exports your global classes to the script
+	///
+	Exporter::Export(module)
 	[
-		Exporter::Class<MyClass>()
-			.constructor()
-			.constructor<int>()
+		Exporter::Class<MyClass>(/* INITIAL FLAGS HERE */)
+			.ctor()
+			.ctor<int>()			
+			.dtor()
 			.method("method1", &MyClass::method1)
 			.method("method2", &MyClass::method2)
-			.property("property1", &MyClass::getProperty1, &MyClass::setProperty1)
-			.property("property2", &MyClass::getProperty2, &MyClass::setProperty2)
+			.method("method3", &MyClass::method3)
+			.method("method4", &MyClass::method4)
 	];
-
-	*/
 
 	///
 	/// Compiles a file
 	///
 
- 	script.compile("AngelBinder.as");
+	module->compile("AngelBinder.as");
+
+	///  ---------- Planned "TODO" list Below ------------- 
 
 	return 0;
 

@@ -18,125 +18,74 @@ using namespace AngelBinder;
 #endif
 
 ///
-/// Exported function/object prototypes.
+/// Example class
 ///
-
-class MyClass
+class Character
 {
 private:
-	int test;
+	std::string _name;
+	int _life;
 
 public:
-	MyClass()
-		: test(0)
+	int _mana;
+
+public:
+	Character()
+		: _name("Unnamed"), _life(100)
 	{
 	}
 
-	MyClass(int val)
-		: test(val)
+	~Character()
 	{
 	}
 
-	~MyClass()
+	std::string getName() const
 	{
+		return this->_name;
 	}
 
-	void method1()
+	void setName(std::string val)
 	{
-		this->test = 0;
+		this->_name = val;
 	}
 
-	int method2()
+	void say(std::string& message)
 	{
-		return rand();
+		std::cout << this->_name << ": " << message << std::endl;
 	}
 
-	void method3(int x)
+	void hit()
 	{
-		this->test = x;
+		this->_life -= rand() % 10;
+		std::cout << "[" << this->_name << ": Damn it!!!!" << std::endl;
 	}
 
-	int method4(int y)
+	void heal()
 	{
-		return y * this->test;
+		this->_life += rand() % 10;
+		std::cout << "[" << this->_name << "] Ahh, that feels good!" << std::endl;
+	}
+
+	void kill()
+	{
+		std::cout << this->_name << " has been murdered." << std::endl;
+	}
+
+	bool isDead()
+	{
+		return this->_life <= 0;
 	}
 
 };
 
-int				g_var1;
-unsigned int	g_var2;
-short			g_var3;
-std::string		g_var4;
-
-int sum(int a, int b)
-{
-	return a + b;
-}
-
-int subtract(int a, int b)
-{
-	return a - b;
-}
-
-int multiply(int a, int b)
-{
-	return a / b;
-}
-
-int divide(int a, int b)
-{
-	return a / b;
-}
-
-void log(std::string message)
-{
-	cout << "[Script Log] " << message << endl;
-}
-
-//
-// Translates all the types you need to be different 
-// from its name, that is contained in a namespace, or for structs.
-// 
-// if I define, MyClass this way, it doesn't need to be translated:
-// 
-// class MyClass 
-// {
-//   ...
-// };
-// 
-// but if I define it this way, it must be translated:
-//
-// namespace MyNamespace
-// {
-//   class MyClass
-//   {
-//     ...
-//   };
-// }
-//
-// with AB_TRANSLATE_TYPE(MyNamespace::MyClass, "MyClass")
-//
-// structs also needs to be translated, or you'll get excpetions 
-// when exporting them.
-// 
-// typedef struct {
-//   int x;
-// } MyStruct;
-//
-// AB_TRANSLATE_TYPE(MyStruct, "MyStruct")
-//
-
-AB_TRANSLATE_TYPE(MyClass, "myclass")
+AB_TRANSLATE_TYPE(Character, "Character")
 AB_TRANSLATE_TYPE(std::string, "string")
 
 ///
 /// Message event handler
 ///
 
-void onScriptMessage(Engine* script, std::string message)
-{
-	cout << "[Script] " << message << endl;
-}
+void onScriptMessage(Engine* script, std::string message);
 
 ///
 /// Usage Example
@@ -173,41 +122,25 @@ int main(int argc, char* argv[])
 	/// Exports your global variables to the script
 	///
 
-	Exporter::Export(module)
-	[
-		Exporter::Variables()
-			.def("g_int", &g_var1)
-			.def("g_uint", &g_var2)
-			.def("g_short", &g_var3)
-			.def("g_string", &g_var4)
-	];
-
 	///
 	/// Exports your global functions to the script
 	///
-
-	Exporter::Export(module)
-	[
-		Exporter::Functions()
-			.def("sum", &sum) 
-			.def("subtract", &subtract)
-			.def("multiply", &multiply)
-			.def("divide", &divide)
-	];
 
 	///
 	/// Exports your global classes to the script
 	///
 	Exporter::Export(module)
 	[
-		Exporter::Class<MyClass>(/* INITIAL FLAGS HERE */)
+		Exporter::Class<Character>()
 			.ctor()
-			.ctor<int>()			
 			.dtor()
-			.method("method1", &MyClass::method1)
-			.method("method2", &MyClass::method2)
-			.method("method3", &MyClass::method3)
-			.method("method4", &MyClass::method4)
+			.member("test", &Character::_mana)
+			.property("name", &Character::getName, &Character::setName)
+			.method("hit", &Character::hit)
+			.method("heal", &Character::heal)
+			.method("isdead", &Character::isDead)
+			.method("kill", &Character::kill)
+			.method("say", &Character::say)
 	];
 
 	///
@@ -226,4 +159,12 @@ int main(int argc, char* argv[])
 /// Implementations
 ///
 
+void onScriptMessage(Engine* script, std::string message)
+{
+	cout << "[Script] " << message << endl;
+}
 
+void log(std::string message)
+{
+	cout << "[Script Log] " << message << endl;
+}

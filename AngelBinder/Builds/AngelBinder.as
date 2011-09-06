@@ -2,9 +2,16 @@
 
 void main()
 {
-	int a = sum(5, 7);
-	int b = subtract(a, 2);
-	int c = multiply(b, 10);
-	int d = divide(c, 4);
-	// d == 25?
+	int i = 0;
+	Character c;
+	c.name("WoLf");
+	c.say("Hello World!");
+	while(!c.isdead())
+	{
+		if(i++ % 3 == 0)
+		{
+			c.heal();
+		}
+		c.hit();
+	}
 }

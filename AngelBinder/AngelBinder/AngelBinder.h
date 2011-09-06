@@ -165,7 +165,7 @@ struct Type<T&>
 {
 	static std::string toString()
 	{
-		return TypeString<T>::value() + "&inout";
+		return TypeString<T>::value() + " &in";
 	}
 };
 
@@ -177,7 +177,7 @@ struct Type<const T&>
 {
 	static std::string toString()
 	{
-		return TypeString<T>::value() + "&in";
+		return TypeString<T>::value() + " &in";
 	}
 };
 
@@ -876,12 +876,11 @@ private:
 
 public:
 	///
-	/// FunctionClass constructor
+	/// ConstructorClass constructor
 	///
 	ConstructorClass(AS_NAMESPACE_QUALIFIER asSFuncPtr func)
 		: _func(func)
 	{
-
 	}
 
 	///
@@ -922,7 +921,7 @@ public:
 };
 
 ///
-/// Class constructors
+/// Class methods
 ///
 class MethodClass
 {
@@ -941,7 +940,7 @@ private:
 
 public:
 	///
-	/// FunctionClass constructor
+	/// MethodClass constructor
 	///
 	MethodClass(std::string name, std::string ret, AS_NAMESPACE_QUALIFIER asSFuncPtr func) 
 		: _func(func), _ret(ret), _name(name)
@@ -986,6 +985,115 @@ public:
 };
 
 ///
+/// Class accessors
+///
+class AccessorClass
+{
+private:
+	/// Stores the name of the method
+	std::string _name;
+
+	/// Stores the set function reference
+	MethodClass _getfunc;
+
+	/// Stores the get function reference
+	MethodClass _setfunc;
+
+public:
+	///
+	/// AccessorClass constructor
+	///
+	AccessorClass(std::string name, std::string type, AS_NAMESPACE_QUALIFIER asSFuncPtr getfunc, AS_NAMESPACE_QUALIFIER asSFuncPtr setfunc) 
+		: _name(name), _getfunc("get_" + name, type, getfunc), _setfunc("set_" + name, "void", setfunc)
+	{
+		this->_setfunc.parameters().push_back(type);
+	}
+
+	///
+	/// Accessor name
+	///
+	std::string name()
+	{
+		return this->_name;
+	}
+
+	///
+	/// Returns the structure for the get method
+	///
+	MethodClass funcGet()
+	{
+		return this->_getfunc;
+	}
+
+	///
+	/// Returns the structure for the set method
+	///
+	MethodClass funcSet()
+	{
+		return this->_setfunc;
+	}
+
+};
+
+///
+/// Class constructors
+///
+class MemberClass
+{
+private:
+	/// Stores the name of the member
+	std::string _name;
+
+	/// Stores the type of the member
+	std::string _type;
+
+	/// Stores the offset of the member
+	int _offset;
+
+public:
+	///
+	/// MemberClass constructor
+	///
+	MemberClass(std::string name, std::string type, int offset) 
+		: _name(name), _type(type), _offset(offset)
+	{
+	}
+
+	///
+	/// Returns the member name
+	///
+	std::string name()
+	{
+		return this->_name;
+	}
+
+	///
+	/// Returns the structure for the get method
+	///
+	std::string type()
+	{
+		return this->_type;
+	}
+
+	///
+	/// Returns the structure for the set method
+	///
+	int offset()
+	{
+		return this->_offset;
+	}
+
+	///
+	/// Decomposes the member declaration
+	///
+	std::string decompose()
+	{
+		return this->_type + " " + this->_name;
+	}
+
+};
+
+///
 /// Class exporter
 ///
 template<typename T>
@@ -997,11 +1105,12 @@ class ClassExporter
 	friend class Exporter;
 
 protected:
-	/// Stores all exported constructors
-	std::queue<ConstructorClass> _ctors;
+
+	/// Initial flags
+	int _flags;
 
 	/// Stores all exported constructors
-	std::queue<MethodClass> _methods;
+	std::queue<ConstructorClass> _ctors;
 
 	/// Stores all assignment operators
 	// std::queue<AssignClass> _assigns;
@@ -1009,20 +1118,26 @@ protected:
 	/// Stores all copy constructors
 	// asSFuncPtr _copy;
 
+	/// Stores all exported constructors
+	std::queue<MethodClass> _methods;
+
+	/// Stores all exported accessors
+	std::queue<AccessorClass> _accessors;
+
+	/// Stores all exported accessors
+	std::queue<MemberClass> _members;
+
 	/// Stores if the destructor has been set
 	bool _dtorset;
-
-	/// Stores the destructor pointer
-	AS_NAMESPACE_QUALIFIER asSFuncPtr _dtor;
 
 	/// Stores if the destructor has been set
 	bool _ctorset;
 
+	/// Stores the destructor pointer
+	AS_NAMESPACE_QUALIFIER asSFuncPtr _dtor;
+
 	/// Stores the dummy constructor pointer
 	AS_NAMESPACE_QUALIFIER asSFuncPtr _ctor;
-
-	/// Initial flags
-	int _flags;
 
 protected:
 	///
@@ -1041,7 +1156,9 @@ protected:
 	virtual void finish(Module& instance)
 	{
 
-		int flags = this->_flags | AS_NAMESPACE_QUALIFIER asOBJ_VALUE | AS_NAMESPACE_QUALIFIER asOBJ_APP_CLASS;
+		int flags = this->_flags;
+		flags |= AS_NAMESPACE_QUALIFIER asOBJ_VALUE;
+		flags |= AS_NAMESPACE_QUALIFIER asOBJ_APP_CLASS;
 		flags |= !this->_ctors.empty() || this->_ctorset ? AS_NAMESPACE_QUALIFIER asOBJ_APP_CLASS_CONSTRUCTOR : 0;
 		flags |= this->_dtorset ? AS_NAMESPACE_QUALIFIER asOBJ_APP_CLASS_DESTRUCTOR : 0;
 		flags |= std::tr1::is_pod<T>::value == true ? AS_NAMESPACE_QUALIFIER asOBJ_POD : 0;
@@ -1080,6 +1197,33 @@ protected:
 			AB_MESSAGE_INVOKE_STATIC(&instance.engine(), &instance.engine(), "Registering destructor for '" + name + "' as 'void f()'");
 			r = instance.engine().asEngine()->RegisterObjectBehaviour(name.c_str(), AS_NAMESPACE_QUALIFIER asBEHAVE_DESTRUCT, "void f()", this->_dtor, AS_NAMESPACE_QUALIFIER asCALL_CDECL_OBJLAST);
 			AB_SCRIPT_ASSERT(r >= 0, std::string("Can't register destructor for type '" + name + "'").c_str(), AB_THROW, &instance.engine());
+		}
+
+		while(!this->_members.empty())
+		{
+			MemberClass memb = this->_members.front();
+			AB_MESSAGE_INVOKE_STATIC(&instance.engine(), &instance.engine(), "Registering '" + name + "' member as '" + memb.decompose() + "'");
+
+			r = instance.engine().asEngine()->RegisterObjectProperty(name.c_str(), memb.decompose().c_str(), memb.offset());
+			AB_SCRIPT_ASSERT(r >= 0, std::string("Can't register member for type '" + name + "'").c_str(), AB_THROW, &instance.engine());
+
+			this->_members.pop();
+		}
+
+		while(!this->_accessors.empty())
+		{
+			AccessorClass memb = this->_accessors.front();
+			AB_MESSAGE_INVOKE_STATIC(&instance.engine(), &instance.engine(), "Registering '" + name + "' accessors for property '" + memb.name() + "'");
+
+			MethodClass setf = memb.funcSet();
+			r = instance.engine().asEngine()->RegisterObjectMethod(name.c_str(), setf.decompose().c_str(), setf.address(), AS_NAMESPACE_QUALIFIER asCALL_THISCALL);
+			AB_SCRIPT_ASSERT(r >= 0, std::string("Can't register accessor's 'set' method for type '" + name + "'").c_str(), AB_THROW, &instance.engine());
+
+			MethodClass getf = memb.funcGet();
+			r = instance.engine().asEngine()->RegisterObjectMethod(name.c_str(), getf.decompose().c_str(), getf.address(), AS_NAMESPACE_QUALIFIER asCALL_THISCALL);
+			AB_SCRIPT_ASSERT(r >= 0, std::string("Can't register accessor's 'get' method for type '" + name + "'").c_str(), AB_THROW, &instance.engine());
+
+			this->_accessors.pop();
 		}
 
 		while(!this->_methods.empty())
@@ -1396,6 +1540,29 @@ public:
 		MethodClass mthd(name, Type<R>::toString(), AB_METHOD(T, (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14), R, func));
 		AB_PUSH_ARG(mthd, A1); AB_PUSH_ARG(mthd, A2); AB_PUSH_ARG(mthd, A3); AB_PUSH_ARG(mthd, A4); AB_PUSH_ARG(mthd, A5); AB_PUSH_ARG(mthd, A6); AB_PUSH_ARG(mthd, A7); AB_PUSH_ARG(mthd, A8); AB_PUSH_ARG(mthd, A9); AB_PUSH_ARG(mthd, A10); AB_PUSH_ARG(mthd, A11); AB_PUSH_ARG(mthd, A12); AB_PUSH_ARG(mthd, A13); AB_PUSH_ARG(mthd, A14);         
 		this->_methods.push(mthd);
+		return *this;
+	}
+
+	///
+	/// Accessor functions
+	///
+
+	template<typename V>
+	ClassExporter& property(std::string name, V (T::*getf)() const, void (T::*setf)(V))
+	{
+		AccessorClass access(name, Type<V>::toString(), AB_METHOD(T, () const, V, getf), AB_METHOD(T, (V), void, setf));
+		this->_accessors.push(access);
+		return *this;
+	}
+
+	///
+	/// Registers a member of the struct
+	///
+	template<typename V>
+	ClassExporter& member(std::string name, V T::*offset)
+	{
+		MemberClass memb(name, Type<V>::toString(), *(int*)&offset);
+		this->_members.push(memb);
 		return *this;
 	}
 

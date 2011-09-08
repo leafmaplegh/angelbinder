@@ -14,6 +14,7 @@
 #include <hash_map>
 #include <sstream>
 #include <string>
+#include <functional>
 #include <angelscript.h>
 #include <scriptbuilder.h>
 
@@ -85,18 +86,43 @@ struct TypeString
 ///
 #define AB_TRANSLATE_TYPE(t,n) \
 	template<> \
-struct AB_NAMESPACE TypeString<t> \
-{ \
-	static std::string value() \
-{ \
-	return n; \
-} \
-}; 
+	struct AB_NAMESPACE TypeString<t> \
+	{ \
+		static std::string value() \
+		{ \
+			return n; \
+		} \
+	}; 
+
+///
+/// Macro to help declaring parameter setters.
+///
+#define AB_PARAMETER_SETTER(t,f) \
+	template<> \
+	struct ParameterSetter<t> \
+	{ \
+		void operator()(Context* context, t value) \
+		{ \
+			context->f(value); \
+		} \
+	}; 
+
+///
+/// Macro to help declaring return value readers.
+///
+#define AB_RETURN_READER(t,f) \
+	template<> \
+	struct ReturnReader<t> \
+	{ \
+		t operator()(Context* context) \
+		{ \
+			return (t)context->f(); \
+		} \
+	}; 
 
 ///
 /// Built-in type definition
 ///
-
 AB_TRANSLATE_TYPE(char, "int8")
 AB_TRANSLATE_TYPE(unsigned char, "uint8")
 AB_TRANSLATE_TYPE(short, "int16")
@@ -165,7 +191,7 @@ struct Type<T&>
 {
 	static std::string toString()
 	{
-		return TypeString<T>::value() + " &in";
+		return TypeString<T>::value() + "& in";
 	}
 };
 
@@ -177,7 +203,7 @@ struct Type<const T&>
 {
 	static std::string toString()
 	{
-		return TypeString<T>::value() + " &in";
+		return TypeString<T>::value() + "& in";
 	}
 };
 
@@ -185,9 +211,11 @@ struct Type<const T&>
 /// AngelScript types
 ///
 typedef	AS_NAMESPACE_QUALIFIER asIScriptEngine	ASEngine;
+typedef AS_NAMESPACE_QUALIFIER asIScriptContext ASContext;
+typedef AS_NAMESPACE_QUALIFIER asIScriptModule	ASModule;
 typedef AS_NAMESPACE_QUALIFIER CScriptBuilder	ASBuilder;
 
-/// Decl 
+/// Empty declaration to use as pointer into the engine
 class Module;
 
 ///
@@ -230,7 +258,7 @@ private:
 	///
 	/// Raised when script machine writes a message
 	///
-	static void __cdecl onASMessage( const AS_NAMESPACE_QUALIFIER asSMessageInfo *msg, void *param );
+	static void __cdecl onScriptMessage( const AS_NAMESPACE_QUALIFIER asSMessageInfo *msg, void *param );
 
 	///
 	/// Startup stuff
@@ -259,13 +287,805 @@ public:
 	///
 	/// Creates a new module, or return an existent one.
 	///
-	Module* CreateModule(std::string name);
+	Module* createModule(std::string name);
 
 	///
 	/// Creates a new module, or return an existent one.
 	///
-	Module* GetModule(std::string name);
+	Module* getModule(std::string name);
 
+};
+
+///
+/// Script Function
+///
+class Context
+{
+	/// Friend function class 
+	template<typename T>
+	friend class Function;
+
+private:
+	/// Selected function to execute
+	int _function;
+
+	/// Count of parameters set to this context
+	int _params;
+
+	/// AngelScript's context
+	ASContext* _context;
+
+	/// Engine instance
+	Engine& _engine;
+
+protected:
+	///
+	/// Creates a new context
+	///
+	Context(Engine& engine, int function);
+
+	///
+	/// Releases the context
+	///
+	~Context();
+
+	///
+	/// Script exception callback
+	///
+	void exceptionCallback(asIScriptContext *context);
+
+public:
+	///
+	/// Executes the context
+	///
+	void execute();
+
+	///
+	/// Parameter setters
+	///
+	void setAddress(void* value);
+	void setObject(void* value);
+	void setByte(asBYTE value);
+	void setWord(asWORD value);
+	void setDWord(unsigned int value);
+	void setQWord(unsigned long long value);
+	void setFloat(float value);
+	void setDouble(double value);
+
+	///
+	/// Return readers
+	///
+	void* readAddress();
+	void* readObject();
+	asBYTE readByte();
+	asWORD readWord();
+	asDWORD readDWord();
+	asQWORD readQWord();
+	float readFloat();
+	double readDouble();
+
+};
+
+///
+/// Parameter setters
+///
+template<typename T>
+struct ParameterSetter
+{
+	void operator()(Context* context, T& value)
+	{
+		context->setObject((void*)&value);
+	}
+};
+
+template<typename T>
+struct ParameterSetter<T*>
+{
+	void operator()(Context* context, T* value)
+	{
+		ParameterSetter<T>()(context, *value);
+	}
+};
+
+template<typename T>
+struct ParameterSetter<const T>
+{
+	void operator()(Context* context, const T value)
+	{
+		ParameterSetter<T>()(context, (T&)(value));
+	}
+};
+
+template<typename T>
+struct ParameterSetter<const T*>
+{
+	void operator()(Context* context, const T* value)
+	{
+		ParameterSetter<T>()(context, (T&)(*value));
+	}
+};
+
+template<typename T>
+struct ParameterSetter<T&>
+{
+	void operator()(Context* context, T& value)
+	{
+		ParameterSetter<T>()(context, value);
+	}
+};
+
+template<typename T>
+struct ParameterSetter<const T&>
+{
+	void operator()(Context* context, const T& value)
+	{
+		ParameterSetter<T>()(context, value);
+	}
+};
+
+///
+/// Special parameter types.
+///
+AB_PARAMETER_SETTER(char, setByte);
+AB_PARAMETER_SETTER(unsigned char, setByte);
+AB_PARAMETER_SETTER(short, setWord);
+AB_PARAMETER_SETTER(unsigned short, setWord);
+AB_PARAMETER_SETTER(int, setDWord);
+AB_PARAMETER_SETTER(unsigned int, setDWord);
+AB_PARAMETER_SETTER(long long, setQWord);
+AB_PARAMETER_SETTER(unsigned long long, setQWord);
+AB_PARAMETER_SETTER(float, setFloat);
+AB_PARAMETER_SETTER(double, setDouble);
+
+///
+/// Parameter setters
+///
+template<typename T>
+struct ReturnReader
+{
+	T operator()(Context* context)
+	{
+		return *static_cast<T*>(context->readObject());
+	}
+};
+
+template<typename T>
+struct ReturnReader<T*>
+{
+	T* operator()(Context* context)
+	{
+		return static_cast<T*>(context->readObject());
+	}
+};
+
+template<typename T>
+struct ReturnReader<const T>
+{
+	const T operator()(Context* context)
+	{
+		return ReturnReader<T>()(context);
+	}
+};
+
+template<typename T>
+struct ReturnReader<const T*>
+{
+	const T* operator()(Context* context)
+	{
+		return ReturnReader<T*>()(context);
+	}
+};
+
+template<typename T>
+struct ReturnReader<T&>
+{
+	T& operator()(Context* context)
+	{
+		return ReturnReader<T>()(context);
+	}
+};
+
+template<typename T>
+struct ReturnReader<const T&>
+{
+	const T& operator()(Context* context)
+	{
+		return ReturnReader<T>()(context);
+	}
+};
+
+///
+/// Special return types.
+///
+AB_RETURN_READER(char, readByte);
+AB_RETURN_READER(unsigned char, readByte);
+AB_RETURN_READER(short, readWord);
+AB_RETURN_READER(unsigned short, readWord);
+AB_RETURN_READER(int, readDWord);
+AB_RETURN_READER(unsigned int, readDWord);
+AB_RETURN_READER(long long, readQWord);
+AB_RETURN_READER(unsigned long long, readQWord);
+AB_RETURN_READER(float, readFloat);
+AB_RETURN_READER(double, readDouble);
+
+#define AB_FUNCTION_CONSTRUCTOR \
+		friend class Module; \
+	private: \
+		int _function; \
+		Engine& _engine; \
+	protected: \
+		Function(Engine& engine, int function) \
+			: _engine(engine), _function(function) \
+		{ \
+		} \
+	public: 
+
+///
+/// Dummy function class
+///
+template<typename F>
+class Function 
+{
+	friend class Module;
+};
+
+///
+/// Function definitions
+///
+
+template<>
+class Function<void()>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	void operator()()
+	{
+		Context ctx(this->_engine, this->_function);
+		ctx.execute();
+	}
+};
+
+template<typename R>
+class Function<R()>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	R operator()()
+	{
+		Context ctx(this->_engine, this->_function);
+		ctx.execute();
+		return ReturnReader<R>()(&ctx);
+	}
+};
+
+template<typename A1>
+class Function<void(A1)>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	void operator()(A1 a1)
+	{
+		Context ctx(this->_engine, this->_function);
+		ParameterSetter<A1>()(&ctx, a1);
+		ctx.execute();
+	}
+};
+
+template<typename R, typename A1>
+class Function<R(A1)>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	R operator()(A1 a1)
+	{
+		Context ctx(this->_engine, this->_function);
+		ParameterSetter<A1>()(&ctx, a1);
+		ctx.execute();
+		return ReturnReader<R>()(&ctx);
+	}
+};
+
+template<typename A1, typename A2>
+class Function<void(A1, A2)>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	void operator()(A1 a1, A2 a2)
+	{
+		Context ctx(this->_engine, this->_function);
+		ParameterSetter<A1>()(&ctx, a1);
+		ParameterSetter<A2>()(&ctx, a2);
+		ctx.execute();
+	}
+};
+
+template<typename R, typename A1, typename A2>
+class Function<R(A1, A2)>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	R operator()(A1 a1, A2 a2)
+	{
+		Context ctx(this->_engine, this->_function);
+		ParameterSetter<A1>()(&ctx, a1);
+		ParameterSetter<A2>()(&ctx, a2);
+		ctx.execute();
+		return ReturnReader<R>()(&ctx);
+	}
+};
+
+template<typename A1, typename A2, typename A3>
+class Function<void(A1, A2, A3)>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	void operator()(A1 a1, A2 a2, A3 a3)
+	{
+		Context ctx(this->_engine, this->_function);
+		ParameterSetter<A1>()(&ctx, a1);
+		ParameterSetter<A2>()(&ctx, a2);
+		ParameterSetter<A3>()(&ctx, a3);
+		ctx.execute();
+	}
+};
+
+template<typename R, typename A1, typename A2, typename A3>
+class Function<R(A1, A2, A3)>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	R operator()(A1 a1, A2 a2, A3 a3)
+	{
+		Context ctx(this->_engine, this->_function);
+		ParameterSetter<A1>()(&ctx, a1);
+		ParameterSetter<A2>()(&ctx, a2);
+		ParameterSetter<A3>()(&ctx, a3);
+		ctx.execute();
+		return ReturnReader<R>()(&ctx);
+	}
+};
+
+template<typename A1, typename A2, typename A3, typename A4>
+class Function<void(A1, A2, A3, A4)>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	void operator()(A1 a1, A2 a2, A3 a3, A4 a4)
+	{
+		Context ctx(this->_engine, this->_function);
+		ParameterSetter<A1>()(&ctx, a1);
+		ParameterSetter<A2>()(&ctx, a2);
+		ParameterSetter<A3>()(&ctx, a3);
+		ParameterSetter<A4>()(&ctx, a4);
+		ctx.execute();
+	}
+};
+
+template<typename R, typename A1, typename A2, typename A3, typename A4>
+class Function<R(A1, A2, A3, A4)>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	R operator()(A1 a1, A2 a2, A3 a3, A4 a4)
+	{
+		Context ctx(this->_engine, this->_function);
+		ParameterSetter<A1>()(&ctx, a1);
+		ParameterSetter<A2>()(&ctx, a2);
+		ParameterSetter<A3>()(&ctx, a3);
+		ParameterSetter<A4>()(&ctx, a4);
+		ctx.execute();
+		return ReturnReader<R>()(&ctx);
+	}
+};
+
+template<typename A1, typename A2, typename A3, typename A4, typename A5>
+class Function<void(A1, A2, A3, A4, A5)>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5)
+	{
+		Context ctx(this->_engine, this->_function);
+		ParameterSetter<A1>()(&ctx, a1);
+		ParameterSetter<A2>()(&ctx, a2);
+		ParameterSetter<A3>()(&ctx, a3);
+		ParameterSetter<A4>()(&ctx, a4);
+		ParameterSetter<A5>()(&ctx, a5);
+		ctx.execute();
+	}
+};
+
+template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5>
+class Function<R(A1, A2, A3, A4, A5)>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5)
+	{
+		Context ctx(this->_engine, this->_function);
+		ParameterSetter<A1>()(&ctx, a1);
+		ParameterSetter<A2>()(&ctx, a2);
+		ParameterSetter<A3>()(&ctx, a3);
+		ParameterSetter<A4>()(&ctx, a4);
+		ParameterSetter<A5>()(&ctx, a5);
+		ctx.execute();
+		return ReturnReader<R>()(&ctx);
+	}
+};
+
+template<typename A1, typename A2, typename A3, typename A4, typename A5, typename A6>
+class Function<void(A1, A2, A3, A4, A5, A6)>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6)
+	{
+		Context ctx(this->_engine, this->_function);
+		ParameterSetter<A1>()(&ctx, a1);
+		ParameterSetter<A2>()(&ctx, a2);
+		ParameterSetter<A3>()(&ctx, a3);
+		ParameterSetter<A4>()(&ctx, a4);
+		ParameterSetter<A5>()(&ctx, a5);
+		ParameterSetter<A6>()(&ctx, a6);
+		ctx.execute();
+	}
+};
+
+template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6>
+class Function<R(A1, A2, A3, A4, A5, A6)>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6)
+	{
+		Context ctx(this->_engine, this->_function);
+		ParameterSetter<A1>()(&ctx, a1);
+		ParameterSetter<A2>()(&ctx, a2);
+		ParameterSetter<A3>()(&ctx, a3);
+		ParameterSetter<A4>()(&ctx, a4);
+		ParameterSetter<A5>()(&ctx, a5);
+		ParameterSetter<A6>()(&ctx, a6);
+		ctx.execute();
+		return ReturnReader<R>()(&ctx);
+	}
+};
+
+template<typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7>
+class Function<void(A1, A2, A3, A4, A5, A6, A7)>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7)
+	{
+		Context ctx(this->_engine, this->_function);
+		ParameterSetter<A1>()(&ctx, a1);
+		ParameterSetter<A2>()(&ctx, a2);
+		ParameterSetter<A3>()(&ctx, a3);
+		ParameterSetter<A4>()(&ctx, a4);
+		ParameterSetter<A5>()(&ctx, a5);
+		ParameterSetter<A6>()(&ctx, a6);
+		ParameterSetter<A7>()(&ctx, a7);
+		ctx.execute();
+	}
+};
+
+template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7>
+class Function<R(A1, A2, A3, A4, A5, A6, A7)>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7)
+	{
+		Context ctx(this->_engine, this->_function);
+		ParameterSetter<A1>()(&ctx, a1);
+		ParameterSetter<A2>()(&ctx, a2);
+		ParameterSetter<A3>()(&ctx, a3);
+		ParameterSetter<A4>()(&ctx, a4);
+		ParameterSetter<A5>()(&ctx, a5);
+		ParameterSetter<A6>()(&ctx, a6);
+		ParameterSetter<A7>()(&ctx, a7);
+		ctx.execute();
+		return ReturnReader<R>()(&ctx);
+	}
+};
+
+template<typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8>
+class Function<void(A1, A2, A3, A4, A5, A6, A7, A8)>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8)
+	{
+		Context ctx(this->_engine, this->_function);
+		ParameterSetter<A1>()(&ctx, a1);
+		ParameterSetter<A2>()(&ctx, a2);
+		ParameterSetter<A3>()(&ctx, a3);
+		ParameterSetter<A4>()(&ctx, a4);
+		ParameterSetter<A5>()(&ctx, a5);
+		ParameterSetter<A6>()(&ctx, a6);
+		ParameterSetter<A7>()(&ctx, a7);
+		ParameterSetter<A8>()(&ctx, a8);
+		ctx.execute();
+	}
+};
+
+template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8>
+class Function<R(A1, A2, A3, A4, A5, A6, A7, A8)>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8)
+	{
+		Context ctx(this->_engine, this->_function);
+		ParameterSetter<A1>()(&ctx, a1);
+		ParameterSetter<A2>()(&ctx, a2);
+		ParameterSetter<A3>()(&ctx, a3);
+		ParameterSetter<A4>()(&ctx, a4);
+		ParameterSetter<A5>()(&ctx, a5);
+		ParameterSetter<A6>()(&ctx, a6);
+		ParameterSetter<A7>()(&ctx, a7);
+		ParameterSetter<A8>()(&ctx, a8);
+		ctx.execute();
+		return ReturnReader<R>()(&ctx);
+	}
+};
+
+template<typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9>
+class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9)>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9)
+	{
+		Context ctx(this->_engine, this->_function);
+		ParameterSetter<A1>()(&ctx, a1);
+		ParameterSetter<A2>()(&ctx, a2);
+		ParameterSetter<A3>()(&ctx, a3);
+		ParameterSetter<A4>()(&ctx, a4);
+		ParameterSetter<A5>()(&ctx, a5);
+		ParameterSetter<A6>()(&ctx, a6);
+		ParameterSetter<A7>()(&ctx, a7);
+		ParameterSetter<A8>()(&ctx, a8);
+		ParameterSetter<A9>()(&ctx, a9);
+		ctx.execute();
+	}
+};
+
+template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9>
+class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9)>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9)
+	{
+		Context ctx(this->_engine, this->_function);
+		ParameterSetter<A1>()(&ctx, a1);
+		ParameterSetter<A2>()(&ctx, a2);
+		ParameterSetter<A3>()(&ctx, a3);
+		ParameterSetter<A4>()(&ctx, a4);
+		ParameterSetter<A5>()(&ctx, a5);
+		ParameterSetter<A6>()(&ctx, a6);
+		ParameterSetter<A7>()(&ctx, a7);
+		ParameterSetter<A8>()(&ctx, a8);
+		ParameterSetter<A9>()(&ctx, a9);
+		ctx.execute();
+		return ReturnReader<R>()(&ctx);
+	}
+};
+
+template<typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10>
+class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10)>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10)
+	{
+		Context ctx(this->_engine, this->_function);
+		ParameterSetter<A1>()(&ctx, a1);
+		ParameterSetter<A2>()(&ctx, a2);
+		ParameterSetter<A3>()(&ctx, a3);
+		ParameterSetter<A4>()(&ctx, a4);
+		ParameterSetter<A5>()(&ctx, a5);
+		ParameterSetter<A6>()(&ctx, a6);
+		ParameterSetter<A7>()(&ctx, a7);
+		ParameterSetter<A8>()(&ctx, a8);
+		ParameterSetter<A9>()(&ctx, a9);
+		ParameterSetter<A10>()(&ctx, a10);
+		ctx.execute();
+	}
+};
+
+template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10>
+class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10)>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10)
+	{
+		Context ctx(this->_engine, this->_function);
+		ParameterSetter<A1>()(&ctx, a1);
+		ParameterSetter<A2>()(&ctx, a2);
+		ParameterSetter<A3>()(&ctx, a3);
+		ParameterSetter<A4>()(&ctx, a4);
+		ParameterSetter<A5>()(&ctx, a5);
+		ParameterSetter<A6>()(&ctx, a6);
+		ParameterSetter<A7>()(&ctx, a7);
+		ParameterSetter<A8>()(&ctx, a8);
+		ParameterSetter<A9>()(&ctx, a9);
+		ParameterSetter<A10>()(&ctx, a10);
+		ctx.execute();
+		return ReturnReader<R>()(&ctx);
+	}
+};
+
+template<typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10, typename A11>
+class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11)>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11)
+	{
+		Context ctx(this->_engine, this->_function);
+		ParameterSetter<A1>()(&ctx, a1);
+		ParameterSetter<A2>()(&ctx, a2);
+		ParameterSetter<A3>()(&ctx, a3);
+		ParameterSetter<A4>()(&ctx, a4);
+		ParameterSetter<A5>()(&ctx, a5);
+		ParameterSetter<A6>()(&ctx, a6);
+		ParameterSetter<A7>()(&ctx, a7);
+		ParameterSetter<A8>()(&ctx, a8);
+		ParameterSetter<A9>()(&ctx, a9);
+		ParameterSetter<A10>()(&ctx, a10);
+		ParameterSetter<A11>()(&ctx, a11);
+		ctx.execute();
+	}
+};
+
+template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10, typename A11>
+class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11)>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11)
+	{
+		Context ctx(this->_engine, this->_function);
+		ParameterSetter<A1>()(&ctx, a1);
+		ParameterSetter<A2>()(&ctx, a2);
+		ParameterSetter<A3>()(&ctx, a3);
+		ParameterSetter<A4>()(&ctx, a4);
+		ParameterSetter<A5>()(&ctx, a5);
+		ParameterSetter<A6>()(&ctx, a6);
+		ParameterSetter<A7>()(&ctx, a7);
+		ParameterSetter<A8>()(&ctx, a8);
+		ParameterSetter<A9>()(&ctx, a9);
+		ParameterSetter<A10>()(&ctx, a10);
+		ParameterSetter<A11>()(&ctx, a11);
+		ctx.execute();
+		return ReturnReader<R>()(&ctx);
+	}
+};
+
+template<typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10, typename A11, typename A12>
+class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12)>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12)
+	{
+		Context ctx(this->_engine, this->_function);
+		ParameterSetter<A1>()(&ctx, a1);
+		ParameterSetter<A2>()(&ctx, a2);
+		ParameterSetter<A3>()(&ctx, a3);
+		ParameterSetter<A4>()(&ctx, a4);
+		ParameterSetter<A5>()(&ctx, a5);
+		ParameterSetter<A6>()(&ctx, a6);
+		ParameterSetter<A7>()(&ctx, a7);
+		ParameterSetter<A8>()(&ctx, a8);
+		ParameterSetter<A9>()(&ctx, a9);
+		ParameterSetter<A10>()(&ctx, a10);
+		ParameterSetter<A11>()(&ctx, a11);
+		ParameterSetter<A12>()(&ctx, a12);
+		ctx.execute();
+	}
+};
+
+template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10, typename A11, typename A12>
+class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12)>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12)
+	{
+		Context ctx(this->_engine, this->_function);
+		ParameterSetter<A1>()(&ctx, a1);
+		ParameterSetter<A2>()(&ctx, a2);
+		ParameterSetter<A3>()(&ctx, a3);
+		ParameterSetter<A4>()(&ctx, a4);
+		ParameterSetter<A5>()(&ctx, a5);
+		ParameterSetter<A6>()(&ctx, a6);
+		ParameterSetter<A7>()(&ctx, a7);
+		ParameterSetter<A8>()(&ctx, a8);
+		ParameterSetter<A9>()(&ctx, a9);
+		ParameterSetter<A10>()(&ctx, a10);
+		ParameterSetter<A11>()(&ctx, a11);
+		ParameterSetter<A12>()(&ctx, a12);
+		ctx.execute();
+		return ReturnReader<R>()(&ctx);
+	}
+};
+
+template<typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10, typename A11, typename A12, typename A13>
+class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13)>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12, A13 a13)
+	{
+		Context ctx(this->_engine, this->_function);
+		ParameterSetter<A1>()(&ctx, a1);
+		ParameterSetter<A2>()(&ctx, a2);
+		ParameterSetter<A3>()(&ctx, a3);
+		ParameterSetter<A4>()(&ctx, a4);
+		ParameterSetter<A5>()(&ctx, a5);
+		ParameterSetter<A6>()(&ctx, a6);
+		ParameterSetter<A7>()(&ctx, a7);
+		ParameterSetter<A8>()(&ctx, a8);
+		ParameterSetter<A9>()(&ctx, a9);
+		ParameterSetter<A10>()(&ctx, a10);
+		ParameterSetter<A11>()(&ctx, a11);
+		ParameterSetter<A12>()(&ctx, a12);
+		ParameterSetter<A13>()(&ctx, a13);
+		ctx.execute();
+	}
+};
+
+template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10, typename A11, typename A12, typename A13>
+class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13)>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12, A13 a13)
+	{
+		Context ctx(this->_engine, this->_function);
+		ParameterSetter<A1>()(&ctx, a1);
+		ParameterSetter<A2>()(&ctx, a2);
+		ParameterSetter<A3>()(&ctx, a3);
+		ParameterSetter<A4>()(&ctx, a4);
+		ParameterSetter<A5>()(&ctx, a5);
+		ParameterSetter<A6>()(&ctx, a6);
+		ParameterSetter<A7>()(&ctx, a7);
+		ParameterSetter<A8>()(&ctx, a8);
+		ParameterSetter<A9>()(&ctx, a9);
+		ParameterSetter<A10>()(&ctx, a10);
+		ParameterSetter<A11>()(&ctx, a11);
+		ParameterSetter<A12>()(&ctx, a12);
+		ParameterSetter<A13>()(&ctx, a13);
+		ctx.execute();
+		return ReturnReader<R>()(&ctx);
+	}
+};
+
+template<typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10, typename A11, typename A12, typename A13, typename A14>
+class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14)>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12, A13 a13, A14 a14)
+	{
+		Context ctx(this->_engine, this->_function);
+		ParameterSetter<A1>()(&ctx, a1);
+		ParameterSetter<A2>()(&ctx, a2);
+		ParameterSetter<A3>()(&ctx, a3);
+		ParameterSetter<A4>()(&ctx, a4);
+		ParameterSetter<A5>()(&ctx, a5);
+		ParameterSetter<A6>()(&ctx, a6);
+		ParameterSetter<A7>()(&ctx, a7);
+		ParameterSetter<A8>()(&ctx, a8);
+		ParameterSetter<A9>()(&ctx, a9);
+		ParameterSetter<A10>()(&ctx, a10);
+		ParameterSetter<A11>()(&ctx, a11);
+		ParameterSetter<A12>()(&ctx, a12);
+		ParameterSetter<A13>()(&ctx, a13);
+		ParameterSetter<A14>()(&ctx, a14);
+		ctx.execute();
+	}
+};
+
+template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10, typename A11, typename A12, typename A13, typename A14>
+class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14)>
+{    
+	AB_FUNCTION_CONSTRUCTOR
+	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12, A13 a13, A14 a14)
+	{
+		Context ctx(this->_engine, this->_function);
+		ParameterSetter<A1>()(&ctx, a1);
+		ParameterSetter<A2>()(&ctx, a2);
+		ParameterSetter<A3>()(&ctx, a3);
+		ParameterSetter<A4>()(&ctx, a4);
+		ParameterSetter<A5>()(&ctx, a5);
+		ParameterSetter<A6>()(&ctx, a6);
+		ParameterSetter<A7>()(&ctx, a7);
+		ParameterSetter<A8>()(&ctx, a8);
+		ParameterSetter<A9>()(&ctx, a9);
+		ParameterSetter<A10>()(&ctx, a10);
+		ParameterSetter<A11>()(&ctx, a11);
+		ParameterSetter<A12>()(&ctx, a12);
+		ParameterSetter<A13>()(&ctx, a13);
+		ParameterSetter<A14>()(&ctx, a14);
+		ctx.execute();
+		return ReturnReader<R>()(&ctx);
+	}
 };
 
 ///
@@ -300,6 +1120,28 @@ public:
 	/// Script compiler
 	///
 	bool compile(std::string file);
+
+	template<typename F>
+	Function<F> getFunction(std::string name)
+	{
+		int funcid = this->getFunctionByName(name);
+		// ASSET funcid >= 0
+		Function<F> func(this->_engine, funcid);
+		return func;
+	}
+
+private:
+	int getFunctionByName(std::string name)
+	{
+		ASModule* module = this->_engine.asEngine()->GetModule(this->_name.c_str());
+		return module->GetFunctionIdByName(name.c_str());
+	}
+
+	int getFunctionByDecl(std::string decl)
+	{
+		ASModule* module = this->_engine.asEngine()->GetModule(this->_name.c_str());
+		return module->GetFunctionIdByDecl(decl.c_str());
+	}
 
 };
 

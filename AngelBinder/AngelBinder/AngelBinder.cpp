@@ -32,7 +32,7 @@ void Engine::initialize()
 		this->_builder = new CScriptBuilder();
 		AB_SCRIPT_ASSERT(this->_builder != NULL, "Could not create CScriptBuilder instance.", AB_THROW, this);
 
-		this->_engine->SetMessageCallback(asFUNCTION(&Engine::onASMessage), this, asCALL_CDECL);
+		this->_engine->SetMessageCallback(asFUNCTION(&Engine::onScriptMessage), this, asCALL_CDECL);
 		this->_engine->SetEngineProperty(asEP_SCRIPT_SCANNER, 0);
 	}
 }
@@ -52,7 +52,7 @@ void Engine::uninitialize()
 	this->_engine = NULL;
 }
 
-void __cdecl Engine::onASMessage( const asSMessageInfo *msg, void *param )
+void __cdecl Engine::onScriptMessage( const asSMessageInfo *msg, void *param )
 {
 	Engine* engine = (Engine*)param;
 	if(engine != NULL)
@@ -101,7 +101,7 @@ Engine::MessageCallback& Engine::onMessage()
 	return this->_messages;
 }
 
-Module* Engine::CreateModule( std::string name )
+Module* Engine::createModule( std::string name )
 {
 	std::hash_map<std::string, Module*>::iterator it = this->_modules.find(name);
 	if(it != this->_modules.end())
@@ -117,7 +117,7 @@ Module* Engine::CreateModule( std::string name )
 	return module;
 }
 
-Module* Engine::GetModule( std::string name )
+Module* Engine::getModule( std::string name )
 {
 	std::hash_map<std::string, Module*>::iterator it = this->_modules.find(name);
 	if(it != this->_modules.end())
@@ -300,6 +300,115 @@ void DummyConstructor( void* memory )
 
 void DummyDestructor( void* memory )
 {
+}
+
+
+Context::Context( Engine& engine, int function ) : _engine(engine), _function(function), _params(0)
+{
+	this->_context = engine.asEngine()->CreateContext();
+	AB_SCRIPT_ASSERT(this->_context != NULL, "Context couldn't be created.", AB_THROW, &engine);
+	this->_context->SetExceptionCallback(asMETHOD(Context, exceptionCallback), this, asCALL_THISCALL);
+	this->_context->Prepare(function);
+}
+
+Context::~Context()
+{
+	this->_context->Release();
+}
+
+void Context::exceptionCallback( asIScriptContext *context )
+{
+	int col;  
+	std::stringstream error;
+	int row = context->GetExceptionLineNumber(&col);
+	error <<  "A script exception occurred: "  << context->GetExceptionString() << " at position (" << row << ',' << col << ')';
+	throw std::exception(error.str().c_str());
+}
+
+void Context::execute()
+{
+	int r = this->_context->Execute();
+	AB_SCRIPT_ASSERT(r == asEXECUTION_FINISHED, "Error executing call to script.", AB_THROW, &this->_engine);
+}
+
+void Context::setAddress( void* value )
+{
+	this->_context->SetArgAddress(this->_params++, value);
+}
+
+void Context::setObject( void* value )
+{
+	this->_context->SetArgObject(this->_params++, value);
+}
+
+void Context::setByte( asBYTE value )
+{
+	this->_context->SetArgByte(this->_params++, value);
+}
+
+void Context::setWord( asWORD value )
+{
+	this->_context->SetArgWord(this->_params++, value);
+}
+
+void Context::setDWord( unsigned int value )
+{
+	this->_context->SetArgDWord(this->_params++, value);
+}
+
+void Context::setQWord( unsigned long long value )
+{
+	this->_context->SetArgQWord(this->_params++, value);
+}
+
+void Context::setFloat( float value )
+{
+	this->_context->SetArgFloat(this->_params++, value);
+}
+
+void Context::setDouble( double value )
+{
+	this->_context->SetArgDouble(this->_params++, value);
+}
+
+void* Context::readAddress()
+{
+	return this->_context->GetReturnAddress();
+}
+
+void* Context::readObject()
+{
+	return this->_context->GetReturnObject();
+}
+
+asBYTE Context::readByte()
+{
+	return this->_context->GetReturnByte();
+}
+
+asWORD Context::readWord()
+{
+	return this->_context->GetReturnWord();
+}
+
+asQWORD Context::readQWord()
+{
+	return this->_context->GetReturnQWord();
+}
+
+asDWORD Context::readDWord()
+{
+	return this->_context->GetReturnDWord();
+}
+
+float Context::readFloat()
+{
+	return this->_context->GetReturnFloat();
+}
+
+double Context::readDouble()
+{
+	return this->_context->GetReturnDouble();
 }
 
 AB_END_NAMESPACE

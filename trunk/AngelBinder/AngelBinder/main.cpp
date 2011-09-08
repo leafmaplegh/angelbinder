@@ -86,6 +86,7 @@ AB_TRANSLATE_TYPE(std::string, "string")
 ///
 
 void onScriptMessage(Engine* script, std::string message);
+void scriptLog(std::string& message);
 
 ///
 /// Usage Example
@@ -116,15 +117,16 @@ int main(int argc, char* argv[])
 	/// Declares the module instance
 	///
 
-	Module* module = engine.CreateModule("MyModule");
-
-	///
-	/// Exports your global variables to the script
-	///
+	Module* module = engine.createModule("MyModule");
 
 	///
 	/// Exports your global functions to the script
 	///
+	Exporter::Export(module)
+	[
+		Exporter::Functions()
+			.def("log", &scriptLog)
+	];
 
 	///
 	/// Exports your global classes to the script
@@ -151,6 +153,10 @@ int main(int argc, char* argv[])
 
 	///  ---------- Planned "TODO" list Below ------------- 
 
+	module->getFunction<void()>("main")();
+	int i = module->getFunction<int()>("retint")();
+	int s = module->getFunction<int(int, int)>("sum")(5, 13);
+
 	return 0;
 
 }
@@ -164,7 +170,7 @@ void onScriptMessage(Engine* script, std::string message)
 	cout << "[Script] " << message << endl;
 }
 
-void log(std::string message)
+void scriptLog(std::string& message)
 {
 	cout << "[Script Log] " << message << endl;
 }

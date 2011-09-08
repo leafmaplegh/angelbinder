@@ -2,16 +2,15 @@
 
 void main()
 {
-	int i = 0;
-	Character c;
-	c.name("WoLf");
-	c.say("Hello World!");
-	while(!c.isdead())
-	{
-		if(i++ % 3 == 0)
-		{
-			c.heal();
-		}
-		c.hit();
-	}
+	log("Hello from AngelScript script.");
+}
+
+int retint()
+{
+	return 1234;
+}
+
+int sum(int a, int b)
+{
+	return a + b;
 }

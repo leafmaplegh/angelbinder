@@ -29,11 +29,11 @@
 #ifdef AS_USE_NAMESPACE
 #define AB_BEGIN_NAMESPACE		namespace AngelBinder {
 #define AB_END_NAMESPACE		}
-#define AB_NAMESPACE			AngelBinder::
+#define AB_NAMESPACE_QUALIFIER	AngelBinder::
 #else
 #define AB_BEGIN_NAMESPACE
 #define AB_END_NAMESPACE
-#define AB_NAMESPACE
+#define AB_NAMESPACE_QUALIFIER
 #endif
 
 ///
@@ -86,7 +86,7 @@ struct TypeString
 ///
 #define AB_TRANSLATE_TYPE(t,n) \
 	template<> \
-	struct AB_NAMESPACE TypeString<t> \
+	struct AB_NAMESPACE_QUALIFIER TypeString<t> \
 	{ \
 		static std::string value() \
 		{ \
@@ -271,6 +271,7 @@ public:
 	/// Constructors / destructors
 	///
 	Engine();
+	Engine(MessageCallback callback);
 	~Engine();
 
 	///
@@ -508,7 +509,7 @@ AB_RETURN_READER(unsigned long long, readQWord);
 AB_RETURN_READER(float, readFloat);
 AB_RETURN_READER(double, readDouble);
 
-#define AB_FUNCTION_CONSTRUCTOR \
+#define AB_FUNCTION_CONSTRUCTOR() \
 		friend class Module; \
 	private: \
 		int _function; \
@@ -517,8 +518,7 @@ AB_RETURN_READER(double, readDouble);
 		Function(Engine& engine, int function) \
 			: _engine(engine), _function(function) \
 		{ \
-		} \
-	public: 
+		}
 
 ///
 /// Dummy function class
@@ -527,564 +527,599 @@ template<typename F>
 class Function 
 {
 	friend class Module;
+	static std::string decompose(std::string name)
+	{
+		return "";
+	}
 };
 
 ///
 /// Function definitions
 ///
 
+
 template<>
 class Function<void()>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	void operator()()
 	{
 		Context ctx(this->_engine, this->_function);
+
 		ctx.execute();
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << "void " << name << "()";
+		return stream.str();
 	}
 };
 
 template<typename R>
 class Function<R()>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	R operator()()
 	{
 		Context ctx(this->_engine, this->_function);
+
 		ctx.execute();
 		return ReturnReader<R>()(&ctx);
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << Type<R>::toString() << " " << name << "()";
+		return stream.str();
 	}
 };
 
 template<typename A1>
 class Function<void(A1)>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	void operator()(A1 a1)
 	{
 		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1);
+		ParameterSetter<A1>()(&ctx, a1); 
 		ctx.execute();
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << "void " << name << "(" << Type<A1>::toString() << ")";
+		return stream.str();
 	}
 };
 
 template<typename R, typename A1>
 class Function<R(A1)>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	R operator()(A1 a1)
 	{
 		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1);
+		ParameterSetter<A1>()(&ctx, a1); 
 		ctx.execute();
 		return ReturnReader<R>()(&ctx);
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << Type<R>::toString() << " " << name << "(" << Type<A1>::toString() << ")";
+		return stream.str();
 	}
 };
 
 template<typename A1, typename A2>
 class Function<void(A1, A2)>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	void operator()(A1 a1, A2 a2)
 	{
 		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1);
-		ParameterSetter<A2>()(&ctx, a2);
+		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); 
 		ctx.execute();
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << "void " << name << "(" << Type<A1>::toString() << ", " << Type<A2>::toString() << ")";
+		return stream.str();
 	}
 };
 
 template<typename R, typename A1, typename A2>
 class Function<R(A1, A2)>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	R operator()(A1 a1, A2 a2)
 	{
 		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1);
-		ParameterSetter<A2>()(&ctx, a2);
+		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); 
 		ctx.execute();
 		return ReturnReader<R>()(&ctx);
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << Type<R>::toString() << " " << name << "(" << Type<A1>::toString() << ", " << Type<A2>::toString() << ")";
+		return stream.str();
 	}
 };
 
 template<typename A1, typename A2, typename A3>
 class Function<void(A1, A2, A3)>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	void operator()(A1 a1, A2 a2, A3 a3)
 	{
 		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1);
-		ParameterSetter<A2>()(&ctx, a2);
-		ParameterSetter<A3>()(&ctx, a3);
+		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); 
 		ctx.execute();
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << "void " << name << "(" << Type<A1>::toString() << ", " << Type<A2>::toString() << ", " << Type<A3>::toString() << ")";
+		return stream.str();
 	}
 };
 
 template<typename R, typename A1, typename A2, typename A3>
 class Function<R(A1, A2, A3)>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	R operator()(A1 a1, A2 a2, A3 a3)
 	{
 		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1);
-		ParameterSetter<A2>()(&ctx, a2);
-		ParameterSetter<A3>()(&ctx, a3);
+		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); 
 		ctx.execute();
 		return ReturnReader<R>()(&ctx);
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << Type<R>::toString() << " " << name << "(" << Type<A1>::toString() << ", " << Type<A2>::toString() << ", " << Type<A3>::toString() << ")";
+		return stream.str();
 	}
 };
 
 template<typename A1, typename A2, typename A3, typename A4>
 class Function<void(A1, A2, A3, A4)>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4)
 	{
 		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1);
-		ParameterSetter<A2>()(&ctx, a2);
-		ParameterSetter<A3>()(&ctx, a3);
-		ParameterSetter<A4>()(&ctx, a4);
+		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); 
 		ctx.execute();
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << "void " << name << "(" << Type<A1>::toString() << ", " << Type<A2>::toString() << ", " << Type<A3>::toString() << ", " << Type<A4>::toString() << ")";
+		return stream.str();
 	}
 };
 
 template<typename R, typename A1, typename A2, typename A3, typename A4>
 class Function<R(A1, A2, A3, A4)>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4)
 	{
 		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1);
-		ParameterSetter<A2>()(&ctx, a2);
-		ParameterSetter<A3>()(&ctx, a3);
-		ParameterSetter<A4>()(&ctx, a4);
+		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); 
 		ctx.execute();
 		return ReturnReader<R>()(&ctx);
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << Type<R>::toString() << " " << name << "(" << Type<A1>::toString() << ", " << Type<A2>::toString() << ", " << Type<A3>::toString() << ", " << Type<A4>::toString() << ")";
+		return stream.str();
 	}
 };
 
 template<typename A1, typename A2, typename A3, typename A4, typename A5>
 class Function<void(A1, A2, A3, A4, A5)>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5)
 	{
 		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1);
-		ParameterSetter<A2>()(&ctx, a2);
-		ParameterSetter<A3>()(&ctx, a3);
-		ParameterSetter<A4>()(&ctx, a4);
-		ParameterSetter<A5>()(&ctx, a5);
+		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); 
 		ctx.execute();
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << "void " << name << "(" << Type<A1>::toString() << ", " << Type<A2>::toString() << ", " << Type<A3>::toString() << ", " << Type<A4>::toString() << ", " << Type<A5>::toString() << ")";
+		return stream.str();
 	}
 };
 
 template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5>
 class Function<R(A1, A2, A3, A4, A5)>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5)
 	{
 		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1);
-		ParameterSetter<A2>()(&ctx, a2);
-		ParameterSetter<A3>()(&ctx, a3);
-		ParameterSetter<A4>()(&ctx, a4);
-		ParameterSetter<A5>()(&ctx, a5);
+		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); 
 		ctx.execute();
 		return ReturnReader<R>()(&ctx);
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << Type<R>::toString() << " " << name << "(" << Type<A1>::toString() << ", " << Type<A2>::toString() << ", " << Type<A3>::toString() << ", " << Type<A4>::toString() << ", " << Type<A5>::toString() << ")";
+		return stream.str();
 	}
 };
 
 template<typename A1, typename A2, typename A3, typename A4, typename A5, typename A6>
 class Function<void(A1, A2, A3, A4, A5, A6)>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6)
 	{
 		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1);
-		ParameterSetter<A2>()(&ctx, a2);
-		ParameterSetter<A3>()(&ctx, a3);
-		ParameterSetter<A4>()(&ctx, a4);
-		ParameterSetter<A5>()(&ctx, a5);
-		ParameterSetter<A6>()(&ctx, a6);
+		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); 
 		ctx.execute();
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << "void " << name << "(" << Type<A1>::toString() << ", " << Type<A2>::toString() << ", " << Type<A3>::toString() << ", " << Type<A4>::toString() << ", " << Type<A5>::toString() << ", " << Type<A6>::toString() << ")";
+		return stream.str();
 	}
 };
 
 template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6>
 class Function<R(A1, A2, A3, A4, A5, A6)>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6)
 	{
 		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1);
-		ParameterSetter<A2>()(&ctx, a2);
-		ParameterSetter<A3>()(&ctx, a3);
-		ParameterSetter<A4>()(&ctx, a4);
-		ParameterSetter<A5>()(&ctx, a5);
-		ParameterSetter<A6>()(&ctx, a6);
+		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); 
 		ctx.execute();
 		return ReturnReader<R>()(&ctx);
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << Type<R>::toString() << " " << name << "(" << Type<A1>::toString() << ", " << Type<A2>::toString() << ", " << Type<A3>::toString() << ", " << Type<A4>::toString() << ", " << Type<A5>::toString() << ", " << Type<A6>::toString() << ")";
+		return stream.str();
 	}
 };
 
 template<typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7>
 class Function<void(A1, A2, A3, A4, A5, A6, A7)>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7)
 	{
 		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1);
-		ParameterSetter<A2>()(&ctx, a2);
-		ParameterSetter<A3>()(&ctx, a3);
-		ParameterSetter<A4>()(&ctx, a4);
-		ParameterSetter<A5>()(&ctx, a5);
-		ParameterSetter<A6>()(&ctx, a6);
-		ParameterSetter<A7>()(&ctx, a7);
+		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); 
 		ctx.execute();
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << "void " << name << "(" << Type<A1>::toString() << ", " << Type<A2>::toString() << ", " << Type<A3>::toString() << ", " << Type<A4>::toString() << ", " << Type<A5>::toString() << ", " << Type<A6>::toString() << ", " << Type<A7>::toString() << ")";
+		return stream.str();
 	}
 };
 
 template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7>
 class Function<R(A1, A2, A3, A4, A5, A6, A7)>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7)
 	{
 		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1);
-		ParameterSetter<A2>()(&ctx, a2);
-		ParameterSetter<A3>()(&ctx, a3);
-		ParameterSetter<A4>()(&ctx, a4);
-		ParameterSetter<A5>()(&ctx, a5);
-		ParameterSetter<A6>()(&ctx, a6);
-		ParameterSetter<A7>()(&ctx, a7);
+		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); 
 		ctx.execute();
 		return ReturnReader<R>()(&ctx);
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << Type<R>::toString() << " " << name << "(" << Type<A1>::toString() << ", " << Type<A2>::toString() << ", " << Type<A3>::toString() << ", " << Type<A4>::toString() << ", " << Type<A5>::toString() << ", " << Type<A6>::toString() << ", " << Type<A7>::toString() << ")";
+		return stream.str();
 	}
 };
 
 template<typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8>
 class Function<void(A1, A2, A3, A4, A5, A6, A7, A8)>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8)
 	{
 		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1);
-		ParameterSetter<A2>()(&ctx, a2);
-		ParameterSetter<A3>()(&ctx, a3);
-		ParameterSetter<A4>()(&ctx, a4);
-		ParameterSetter<A5>()(&ctx, a5);
-		ParameterSetter<A6>()(&ctx, a6);
-		ParameterSetter<A7>()(&ctx, a7);
-		ParameterSetter<A8>()(&ctx, a8);
+		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); ParameterSetter<A8>()(&ctx, a8); 
 		ctx.execute();
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << "void " << name << "(" << Type<A1>::toString() << ", " << Type<A2>::toString() << ", " << Type<A3>::toString() << ", " << Type<A4>::toString() << ", " << Type<A5>::toString() << ", " << Type<A6>::toString() << ", " << Type<A7>::toString() << ", " << Type<A8>::toString() << ")";
+		return stream.str();
 	}
 };
 
 template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8>
 class Function<R(A1, A2, A3, A4, A5, A6, A7, A8)>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8)
 	{
 		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1);
-		ParameterSetter<A2>()(&ctx, a2);
-		ParameterSetter<A3>()(&ctx, a3);
-		ParameterSetter<A4>()(&ctx, a4);
-		ParameterSetter<A5>()(&ctx, a5);
-		ParameterSetter<A6>()(&ctx, a6);
-		ParameterSetter<A7>()(&ctx, a7);
-		ParameterSetter<A8>()(&ctx, a8);
+		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); ParameterSetter<A8>()(&ctx, a8); 
 		ctx.execute();
 		return ReturnReader<R>()(&ctx);
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << Type<R>::toString() << " " << name << "(" << Type<A1>::toString() << ", " << Type<A2>::toString() << ", " << Type<A3>::toString() << ", " << Type<A4>::toString() << ", " << Type<A5>::toString() << ", " << Type<A6>::toString() << ", " << Type<A7>::toString() << ", " << Type<A8>::toString() << ")";
+		return stream.str();
 	}
 };
 
 template<typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9>
 class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9)>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9)
 	{
 		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1);
-		ParameterSetter<A2>()(&ctx, a2);
-		ParameterSetter<A3>()(&ctx, a3);
-		ParameterSetter<A4>()(&ctx, a4);
-		ParameterSetter<A5>()(&ctx, a5);
-		ParameterSetter<A6>()(&ctx, a6);
-		ParameterSetter<A7>()(&ctx, a7);
-		ParameterSetter<A8>()(&ctx, a8);
-		ParameterSetter<A9>()(&ctx, a9);
+		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); ParameterSetter<A8>()(&ctx, a8); ParameterSetter<A9>()(&ctx, a9); 
 		ctx.execute();
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << "void " << name << "(" << Type<A1>::toString() << ", " << Type<A2>::toString() << ", " << Type<A3>::toString() << ", " << Type<A4>::toString() << ", " << Type<A5>::toString() << ", " << Type<A6>::toString() << ", " << Type<A7>::toString() << ", " << Type<A8>::toString() << ", " << Type<A9>::toString() << ")";
+		return stream.str();
 	}
 };
 
 template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9>
 class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9)>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9)
 	{
 		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1);
-		ParameterSetter<A2>()(&ctx, a2);
-		ParameterSetter<A3>()(&ctx, a3);
-		ParameterSetter<A4>()(&ctx, a4);
-		ParameterSetter<A5>()(&ctx, a5);
-		ParameterSetter<A6>()(&ctx, a6);
-		ParameterSetter<A7>()(&ctx, a7);
-		ParameterSetter<A8>()(&ctx, a8);
-		ParameterSetter<A9>()(&ctx, a9);
+		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); ParameterSetter<A8>()(&ctx, a8); ParameterSetter<A9>()(&ctx, a9); 
 		ctx.execute();
 		return ReturnReader<R>()(&ctx);
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << Type<R>::toString() << " " << name << "(" << Type<A1>::toString() << ", " << Type<A2>::toString() << ", " << Type<A3>::toString() << ", " << Type<A4>::toString() << ", " << Type<A5>::toString() << ", " << Type<A6>::toString() << ", " << Type<A7>::toString() << ", " << Type<A8>::toString() << ", " << Type<A9>::toString() << ")";
+		return stream.str();
 	}
 };
 
 template<typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10>
 class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10)>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10)
 	{
 		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1);
-		ParameterSetter<A2>()(&ctx, a2);
-		ParameterSetter<A3>()(&ctx, a3);
-		ParameterSetter<A4>()(&ctx, a4);
-		ParameterSetter<A5>()(&ctx, a5);
-		ParameterSetter<A6>()(&ctx, a6);
-		ParameterSetter<A7>()(&ctx, a7);
-		ParameterSetter<A8>()(&ctx, a8);
-		ParameterSetter<A9>()(&ctx, a9);
-		ParameterSetter<A10>()(&ctx, a10);
+		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); ParameterSetter<A8>()(&ctx, a8); ParameterSetter<A9>()(&ctx, a9); ParameterSetter<A10>()(&ctx, a10); 
 		ctx.execute();
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << "void " << name << "(" << Type<A1>::toString() << ", " << Type<A2>::toString() << ", " << Type<A3>::toString() << ", " << Type<A4>::toString() << ", " << Type<A5>::toString() << ", " << Type<A6>::toString() << ", " << Type<A7>::toString() << ", " << Type<A8>::toString() << ", " << Type<A9>::toString() << ", " << Type<A10>::toString() << ")";
+		return stream.str();
 	}
 };
 
 template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10>
 class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10)>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10)
 	{
 		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1);
-		ParameterSetter<A2>()(&ctx, a2);
-		ParameterSetter<A3>()(&ctx, a3);
-		ParameterSetter<A4>()(&ctx, a4);
-		ParameterSetter<A5>()(&ctx, a5);
-		ParameterSetter<A6>()(&ctx, a6);
-		ParameterSetter<A7>()(&ctx, a7);
-		ParameterSetter<A8>()(&ctx, a8);
-		ParameterSetter<A9>()(&ctx, a9);
-		ParameterSetter<A10>()(&ctx, a10);
+		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); ParameterSetter<A8>()(&ctx, a8); ParameterSetter<A9>()(&ctx, a9); ParameterSetter<A10>()(&ctx, a10); 
 		ctx.execute();
 		return ReturnReader<R>()(&ctx);
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << Type<R>::toString() << " " << name << "(" << Type<A1>::toString() << ", " << Type<A2>::toString() << ", " << Type<A3>::toString() << ", " << Type<A4>::toString() << ", " << Type<A5>::toString() << ", " << Type<A6>::toString() << ", " << Type<A7>::toString() << ", " << Type<A8>::toString() << ", " << Type<A9>::toString() << ", " << Type<A10>::toString() << ")";
+		return stream.str();
 	}
 };
 
 template<typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10, typename A11>
 class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11)>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11)
 	{
 		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1);
-		ParameterSetter<A2>()(&ctx, a2);
-		ParameterSetter<A3>()(&ctx, a3);
-		ParameterSetter<A4>()(&ctx, a4);
-		ParameterSetter<A5>()(&ctx, a5);
-		ParameterSetter<A6>()(&ctx, a6);
-		ParameterSetter<A7>()(&ctx, a7);
-		ParameterSetter<A8>()(&ctx, a8);
-		ParameterSetter<A9>()(&ctx, a9);
-		ParameterSetter<A10>()(&ctx, a10);
-		ParameterSetter<A11>()(&ctx, a11);
+		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); ParameterSetter<A8>()(&ctx, a8); ParameterSetter<A9>()(&ctx, a9); ParameterSetter<A10>()(&ctx, a10); ParameterSetter<A11>()(&ctx, a11); 
 		ctx.execute();
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << "void " << name << "(" << Type<A1>::toString() << ", " << Type<A2>::toString() << ", " << Type<A3>::toString() << ", " << Type<A4>::toString() << ", " << Type<A5>::toString() << ", " << Type<A6>::toString() << ", " << Type<A7>::toString() << ", " << Type<A8>::toString() << ", " << Type<A9>::toString() << ", " << Type<A10>::toString() << ", " << Type<A11>::toString() << ")";
+		return stream.str();
 	}
 };
 
 template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10, typename A11>
 class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11)>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11)
 	{
 		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1);
-		ParameterSetter<A2>()(&ctx, a2);
-		ParameterSetter<A3>()(&ctx, a3);
-		ParameterSetter<A4>()(&ctx, a4);
-		ParameterSetter<A5>()(&ctx, a5);
-		ParameterSetter<A6>()(&ctx, a6);
-		ParameterSetter<A7>()(&ctx, a7);
-		ParameterSetter<A8>()(&ctx, a8);
-		ParameterSetter<A9>()(&ctx, a9);
-		ParameterSetter<A10>()(&ctx, a10);
-		ParameterSetter<A11>()(&ctx, a11);
+		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); ParameterSetter<A8>()(&ctx, a8); ParameterSetter<A9>()(&ctx, a9); ParameterSetter<A10>()(&ctx, a10); ParameterSetter<A11>()(&ctx, a11); 
 		ctx.execute();
 		return ReturnReader<R>()(&ctx);
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << Type<R>::toString() << " " << name << "(" << Type<A1>::toString() << ", " << Type<A2>::toString() << ", " << Type<A3>::toString() << ", " << Type<A4>::toString() << ", " << Type<A5>::toString() << ", " << Type<A6>::toString() << ", " << Type<A7>::toString() << ", " << Type<A8>::toString() << ", " << Type<A9>::toString() << ", " << Type<A10>::toString() << ", " << Type<A11>::toString() << ")";
+		return stream.str();
 	}
 };
 
 template<typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10, typename A11, typename A12>
 class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12)>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12)
 	{
 		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1);
-		ParameterSetter<A2>()(&ctx, a2);
-		ParameterSetter<A3>()(&ctx, a3);
-		ParameterSetter<A4>()(&ctx, a4);
-		ParameterSetter<A5>()(&ctx, a5);
-		ParameterSetter<A6>()(&ctx, a6);
-		ParameterSetter<A7>()(&ctx, a7);
-		ParameterSetter<A8>()(&ctx, a8);
-		ParameterSetter<A9>()(&ctx, a9);
-		ParameterSetter<A10>()(&ctx, a10);
-		ParameterSetter<A11>()(&ctx, a11);
-		ParameterSetter<A12>()(&ctx, a12);
+		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); ParameterSetter<A8>()(&ctx, a8); ParameterSetter<A9>()(&ctx, a9); ParameterSetter<A10>()(&ctx, a10); ParameterSetter<A11>()(&ctx, a11); ParameterSetter<A12>()(&ctx, a12); 
 		ctx.execute();
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << "void " << name << "(" << Type<A1>::toString() << ", " << Type<A2>::toString() << ", " << Type<A3>::toString() << ", " << Type<A4>::toString() << ", " << Type<A5>::toString() << ", " << Type<A6>::toString() << ", " << Type<A7>::toString() << ", " << Type<A8>::toString() << ", " << Type<A9>::toString() << ", " << Type<A10>::toString() << ", " << Type<A11>::toString() << ", " << Type<A12>::toString() << ")";
+		return stream.str();
 	}
 };
 
 template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10, typename A11, typename A12>
 class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12)>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12)
 	{
 		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1);
-		ParameterSetter<A2>()(&ctx, a2);
-		ParameterSetter<A3>()(&ctx, a3);
-		ParameterSetter<A4>()(&ctx, a4);
-		ParameterSetter<A5>()(&ctx, a5);
-		ParameterSetter<A6>()(&ctx, a6);
-		ParameterSetter<A7>()(&ctx, a7);
-		ParameterSetter<A8>()(&ctx, a8);
-		ParameterSetter<A9>()(&ctx, a9);
-		ParameterSetter<A10>()(&ctx, a10);
-		ParameterSetter<A11>()(&ctx, a11);
-		ParameterSetter<A12>()(&ctx, a12);
+		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); ParameterSetter<A8>()(&ctx, a8); ParameterSetter<A9>()(&ctx, a9); ParameterSetter<A10>()(&ctx, a10); ParameterSetter<A11>()(&ctx, a11); ParameterSetter<A12>()(&ctx, a12); 
 		ctx.execute();
 		return ReturnReader<R>()(&ctx);
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << Type<R>::toString() << " " << name << "(" << Type<A1>::toString() << ", " << Type<A2>::toString() << ", " << Type<A3>::toString() << ", " << Type<A4>::toString() << ", " << Type<A5>::toString() << ", " << Type<A6>::toString() << ", " << Type<A7>::toString() << ", " << Type<A8>::toString() << ", " << Type<A9>::toString() << ", " << Type<A10>::toString() << ", " << Type<A11>::toString() << ", " << Type<A12>::toString() << ")";
+		return stream.str();
 	}
 };
 
 template<typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10, typename A11, typename A12, typename A13>
 class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13)>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12, A13 a13)
 	{
 		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1);
-		ParameterSetter<A2>()(&ctx, a2);
-		ParameterSetter<A3>()(&ctx, a3);
-		ParameterSetter<A4>()(&ctx, a4);
-		ParameterSetter<A5>()(&ctx, a5);
-		ParameterSetter<A6>()(&ctx, a6);
-		ParameterSetter<A7>()(&ctx, a7);
-		ParameterSetter<A8>()(&ctx, a8);
-		ParameterSetter<A9>()(&ctx, a9);
-		ParameterSetter<A10>()(&ctx, a10);
-		ParameterSetter<A11>()(&ctx, a11);
-		ParameterSetter<A12>()(&ctx, a12);
-		ParameterSetter<A13>()(&ctx, a13);
+		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); ParameterSetter<A8>()(&ctx, a8); ParameterSetter<A9>()(&ctx, a9); ParameterSetter<A10>()(&ctx, a10); ParameterSetter<A11>()(&ctx, a11); ParameterSetter<A12>()(&ctx, a12); ParameterSetter<A13>()(&ctx, a13); 
 		ctx.execute();
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << "void " << name << "(" << Type<A1>::toString() << ", " << Type<A2>::toString() << ", " << Type<A3>::toString() << ", " << Type<A4>::toString() << ", " << Type<A5>::toString() << ", " << Type<A6>::toString() << ", " << Type<A7>::toString() << ", " << Type<A8>::toString() << ", " << Type<A9>::toString() << ", " << Type<A10>::toString() << ", " << Type<A11>::toString() << ", " << Type<A12>::toString() << ", " << Type<A13>::toString() << ")";
+		return stream.str();
 	}
 };
 
 template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10, typename A11, typename A12, typename A13>
 class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13)>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12, A13 a13)
 	{
 		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1);
-		ParameterSetter<A2>()(&ctx, a2);
-		ParameterSetter<A3>()(&ctx, a3);
-		ParameterSetter<A4>()(&ctx, a4);
-		ParameterSetter<A5>()(&ctx, a5);
-		ParameterSetter<A6>()(&ctx, a6);
-		ParameterSetter<A7>()(&ctx, a7);
-		ParameterSetter<A8>()(&ctx, a8);
-		ParameterSetter<A9>()(&ctx, a9);
-		ParameterSetter<A10>()(&ctx, a10);
-		ParameterSetter<A11>()(&ctx, a11);
-		ParameterSetter<A12>()(&ctx, a12);
-		ParameterSetter<A13>()(&ctx, a13);
+		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); ParameterSetter<A8>()(&ctx, a8); ParameterSetter<A9>()(&ctx, a9); ParameterSetter<A10>()(&ctx, a10); ParameterSetter<A11>()(&ctx, a11); ParameterSetter<A12>()(&ctx, a12); ParameterSetter<A13>()(&ctx, a13); 
 		ctx.execute();
 		return ReturnReader<R>()(&ctx);
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << Type<R>::toString() << " " << name << "(" << Type<A1>::toString() << ", " << Type<A2>::toString() << ", " << Type<A3>::toString() << ", " << Type<A4>::toString() << ", " << Type<A5>::toString() << ", " << Type<A6>::toString() << ", " << Type<A7>::toString() << ", " << Type<A8>::toString() << ", " << Type<A9>::toString() << ", " << Type<A10>::toString() << ", " << Type<A11>::toString() << ", " << Type<A12>::toString() << ", " << Type<A13>::toString() << ")";
+		return stream.str();
 	}
 };
 
 template<typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10, typename A11, typename A12, typename A13, typename A14>
 class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14)>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12, A13 a13, A14 a14)
 	{
 		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1);
-		ParameterSetter<A2>()(&ctx, a2);
-		ParameterSetter<A3>()(&ctx, a3);
-		ParameterSetter<A4>()(&ctx, a4);
-		ParameterSetter<A5>()(&ctx, a5);
-		ParameterSetter<A6>()(&ctx, a6);
-		ParameterSetter<A7>()(&ctx, a7);
-		ParameterSetter<A8>()(&ctx, a8);
-		ParameterSetter<A9>()(&ctx, a9);
-		ParameterSetter<A10>()(&ctx, a10);
-		ParameterSetter<A11>()(&ctx, a11);
-		ParameterSetter<A12>()(&ctx, a12);
-		ParameterSetter<A13>()(&ctx, a13);
-		ParameterSetter<A14>()(&ctx, a14);
+		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); ParameterSetter<A8>()(&ctx, a8); ParameterSetter<A9>()(&ctx, a9); ParameterSetter<A10>()(&ctx, a10); ParameterSetter<A11>()(&ctx, a11); ParameterSetter<A12>()(&ctx, a12); ParameterSetter<A13>()(&ctx, a13); ParameterSetter<A14>()(&ctx, a14); 
 		ctx.execute();
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << "void " << name << "(" << Type<A1>::toString() << ", " << Type<A2>::toString() << ", " << Type<A3>::toString() << ", " << Type<A4>::toString() << ", " << Type<A5>::toString() << ", " << Type<A6>::toString() << ", " << Type<A7>::toString() << ", " << Type<A8>::toString() << ", " << Type<A9>::toString() << ", " << Type<A10>::toString() << ", " << Type<A11>::toString() << ", " << Type<A12>::toString() << ", " << Type<A13>::toString() << ", " << Type<A14>::toString() << ")";
+		return stream.str();
 	}
 };
 
 template<typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10, typename A11, typename A12, typename A13, typename A14>
 class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14)>
 {    
-	AB_FUNCTION_CONSTRUCTOR
+	AB_FUNCTION_CONSTRUCTOR();
+public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12, A13 a13, A14 a14)
 	{
 		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1);
-		ParameterSetter<A2>()(&ctx, a2);
-		ParameterSetter<A3>()(&ctx, a3);
-		ParameterSetter<A4>()(&ctx, a4);
-		ParameterSetter<A5>()(&ctx, a5);
-		ParameterSetter<A6>()(&ctx, a6);
-		ParameterSetter<A7>()(&ctx, a7);
-		ParameterSetter<A8>()(&ctx, a8);
-		ParameterSetter<A9>()(&ctx, a9);
-		ParameterSetter<A10>()(&ctx, a10);
-		ParameterSetter<A11>()(&ctx, a11);
-		ParameterSetter<A12>()(&ctx, a12);
-		ParameterSetter<A13>()(&ctx, a13);
-		ParameterSetter<A14>()(&ctx, a14);
+		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); ParameterSetter<A8>()(&ctx, a8); ParameterSetter<A9>()(&ctx, a9); ParameterSetter<A10>()(&ctx, a10); ParameterSetter<A11>()(&ctx, a11); ParameterSetter<A12>()(&ctx, a12); ParameterSetter<A13>()(&ctx, a13); ParameterSetter<A14>()(&ctx, a14); 
 		ctx.execute();
 		return ReturnReader<R>()(&ctx);
+	}
+	static std::string decompose(std::string name)
+	{
+		std::stringstream stream;
+		stream << Type<R>::toString() << " " << name << "(" << Type<A1>::toString() << ", " << Type<A2>::toString() << ", " << Type<A3>::toString() << ", " << Type<A4>::toString() << ", " << Type<A5>::toString() << ", " << Type<A6>::toString() << ", " << Type<A7>::toString() << ", " << Type<A8>::toString() << ", " << Type<A9>::toString() << ", " << Type<A10>::toString() << ", " << Type<A11>::toString() << ", " << Type<A12>::toString() << ", " << Type<A13>::toString() << ", " << Type<A14>::toString() << ")";
+		return stream.str();
 	}
 };
 
@@ -1124,8 +1159,8 @@ public:
 	template<typename F>
 	Function<F> getFunction(std::string name)
 	{
-		int funcid = this->getFunctionByName(name);
-		// ASSET funcid >= 0
+		int funcid = this->getFunctionByDecl(Function<F>::decompose(name));
+		AB_SCRIPT_ASSERT(funcid >= 0, "Function could not be found.", AB_THROW, &this->_engine);
 		Function<F> func(this->_engine, funcid);
 		return func;
 	}

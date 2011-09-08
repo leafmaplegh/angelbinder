@@ -81,6 +81,12 @@ Engine::Engine()
 	this->initialize();
 }
 
+Engine::Engine( MessageCallback callback )
+	: _builder(NULL), _engine(NULL), _messages(callback)
+{
+	this->initialize();
+}
+
 Engine::~Engine()
 {
 	this->uninitialize();
@@ -150,10 +156,10 @@ bool Module::compile ( std::string file )
 	int r = 0;
 
 	r = this->_engine.asBuilder()->AddSectionFromFile(file.c_str()); 
-	AB_SCRIPT_ASSERT(r >= 0, "Could not add script section from file.", AB_THROW, &this->_engine);
+	AB_SCRIPT_ASSERT(r >= 0, std::string("Couldn't add script from file '" + file + "'").c_str(), AB_THROW, &this->_engine);
 
 	r = this->_engine.asBuilder()->BuildModule(); 
-	AB_SCRIPT_ASSERT(r >= 0, "Could not build script.", AB_THROW, &this->_engine);
+	AB_SCRIPT_ASSERT(r >= 0, "Couldn't build script file.", AB_THROW, &this->_engine);
 
 	return true;
 }

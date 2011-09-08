@@ -12,8 +12,11 @@
     <Filter Include="AngelBinder\Addon">
       <UniqueIdentifier>{a23b303c-1552-4c8d-b398-fdc1e47bb986}</UniqueIdentifier>
     </Filter>
-    <Filter Include="AngelBinder\Example">
+    <Filter Include="AngelBinder\Examples">
       <UniqueIdentifier>{1b79dcf9-688e-4f27-af89-17b0787393e4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AngelBinder\Examples\Tests">
+      <UniqueIdentifier>{72fb42ee-8e0f-451e-81ca-a13ff2ac6864}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -29,6 +32,9 @@
     <ClInclude Include="AngelBinder.h">
       <Filter>AngelBinder\Addon</Filter>
     </ClInclude>
+    <ClInclude Include="tests.h">
+      <Filter>AngelBinder\Examples\Tests</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -38,7 +44,13 @@
       <Filter>AngelBinder\Addon</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp">
-      <Filter>AngelBinder\Example</Filter>
+      <Filter>AngelBinder\Examples</Filter>
+    </ClCompile>
+    <ClCompile Include="functions.cpp">
+      <Filter>AngelBinder\Examples\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="tests.cpp">
+      <Filter>AngelBinder\Examples\Tests</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

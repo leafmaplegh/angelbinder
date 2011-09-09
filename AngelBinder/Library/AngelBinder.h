@@ -17,7 +17,10 @@
 #include <concurrent_queue.h>
 #include <angelscript.h>
 #include <scriptbuilder.h>
+
+#if defined(_WIN32)
 #include <windows.h>
+#endif
 
 #ifdef AS_USE_NAMESPACE
 #define AB_BEGIN_NAMESPACE		namespace AngelBinder {
@@ -214,6 +217,58 @@ class Module;
 class Contex;
 
 ///
+/// Thread locker
+///
+class ThreadLocker
+{
+private:
+	/// Objects
+#if defined(_WIN32)
+	CRITICAL_SECTION _section;
+#else 
+	#error You must provide a proper implementation of a thread locker
+#endif
+
+public:
+	///
+	/// Constructors / destructors
+	///
+	ThreadLocker();
+	~ThreadLocker();
+
+	///
+	/// Procedures
+	///
+	void lock();
+	void unlock();
+
+};
+
+///
+/// Automatic thread locker
+///
+class ScopedLocker
+{
+private:
+	///
+	/// Reference to the thread locker
+	///
+	ThreadLocker& _locker;
+
+public:
+	///
+	/// Locks the thread locker
+	///
+	ScopedLocker(ThreadLocker& locker);
+
+	///
+	/// Unlocks the thread locker
+	///
+	~ScopedLocker();
+
+};
+
+///
 /// Context pool class
 ///
 class ContextPool
@@ -236,13 +291,13 @@ private:
 	Concurrency::concurrent_queue<int> _available;
 
 	/// Stores the current count of items on the queue
-	volatile unsigned int _availableCount;
+	unsigned int _availableCount;
 
 	/// Stores if the class is being released
 	bool _releasing;
 
-	/// Stores if the pool has been initialized
-	bool _initialized;
+	/// For multithreading synchronization
+	ThreadLocker _locker;
 
 protected:
 	///
@@ -255,11 +310,6 @@ protected:
 	/// Engine instance
 	///
 	Engine* engine();
-
-	///
-	/// Initializes the context pool
-	///
-	void initialize(int count);
 
 	///
 	/// Returns a context to the queue
@@ -321,8 +371,8 @@ public:
 	///
 	/// Constructors / destructors
 	///
-	Engine(int contexts = 4);
-	Engine(MessageCallback callback, int contexts = 4);
+	Engine();
+	Engine(MessageCallback callback);
 	~Engine();
 
 	///
@@ -346,7 +396,12 @@ public:
 	///
 	Module* getModule(std::string name);
 
-protected:
+	///
+	/// Sleeps the current thread for a while
+	///
+	static void sleep(int ms);
+
+//protected:
 	///
 	/// Retrieves a context from the pool
 	///
@@ -1974,29 +2029,67 @@ public:
 
 };
 
+typedef struct {} ReadOnlyProperty;
+typedef struct {} WriteOnlyProperty;
+
 ///
 /// Class accessors
 ///
 class AccessorClass
 {
+
+	template<typename T>
+	friend class ClassExporter;
+
 private:
 	/// Stores the name of the method
 	std::string _name;
 
+	/// Stores if the get function has been set
+	bool _getfuncset;
+
 	/// Stores the set function reference
 	MethodClass _getfunc;
+
+	/// Stores if the set function has been set
+	bool _setfuncset;
 
 	/// Stores the get function reference
 	MethodClass _setfunc;
 
-public:
+protected:
+	enum AcessorType
+	{
+		ReadOnly, WriteOnly
+	};
+
 	///
 	/// AccessorClass constructor
 	///
 	AccessorClass(std::string name, std::string type, AS_NAMESPACE_QUALIFIER asSFuncPtr getfunc, AS_NAMESPACE_QUALIFIER asSFuncPtr setfunc) 
-		: _name(name), _getfunc("get_" + name, type, getfunc), _setfunc("set_" + name, "void", setfunc)
+		: _name(name), 
+		  _getfunc("get_" + name, type, getfunc), 
+		  _setfunc("set_" + name, "void", setfunc), 
+		  _getfuncset(true),
+		  _setfuncset(true)
 	{
 		this->_setfunc.parameters().push_back(type);
+	}
+
+	///
+	/// AccessorClass constructor
+	///
+	AccessorClass(std::string name, std::string type, AcessorType acessortype, AS_NAMESPACE_QUALIFIER asSFuncPtr func) 
+		: _name(name),
+		  _getfunc("get_" + name, type, func), 
+		  _setfunc("set_" + name, "void", func), 
+		  _getfuncset(acessortype == ReadOnly),
+		  _setfuncset(acessortype == WriteOnly)
+	{
+		if(acessortype == WriteOnly)
+		{
+			this->_setfunc.parameters().push_back(type);
+		}
 	}
 
 	///
@@ -2008,9 +2101,25 @@ public:
 	}
 
 	///
+	/// Returns if the acessor has a get function
+	///
+	bool hasGet()
+	{
+		return this->_getfuncset;
+	}
+
+	///
+	/// Returns if the acessor has a set function
+	///
+	bool hasSet()
+	{
+		return this->_setfuncset;
+	}
+
+	///
 	/// Returns the structure for the get method
 	///
-	MethodClass funcGet()
+	MethodClass get()
 	{
 		return this->_getfunc;
 	}
@@ -2018,7 +2127,7 @@ public:
 	///
 	/// Returns the structure for the set method
 	///
-	MethodClass funcSet()
+	MethodClass set()
 	{
 		return this->_setfunc;
 	}
@@ -2203,16 +2312,21 @@ protected:
 		while(!this->_accessors.empty())
 		{
 			AccessorClass memb = this->_accessors.front();
-			AB_MESSAGE_INVOKE_STATIC(&instance.engine(), &instance.engine(), "Registering '" + name + "' accessors for property '" + memb.name() + "'");
+			AB_MESSAGE_INVOKE_STATIC(&instance.engine(), &instance.engine(), "Registering '" + name + "' accessor for property '" + memb.name() + "'");
 
-			MethodClass setf = memb.funcSet();
-			r = instance.engine().asEngine()->RegisterObjectMethod(name.c_str(), setf.decompose().c_str(), setf.address(), AS_NAMESPACE_QUALIFIER asCALL_THISCALL);
-			AB_SCRIPT_ASSERT(r >= 0, std::string("Can't register accessor's 'set' method for type '" + name + "'").c_str(), AB_THROW, &instance.engine());
-
-			MethodClass getf = memb.funcGet();
-			r = instance.engine().asEngine()->RegisterObjectMethod(name.c_str(), getf.decompose().c_str(), getf.address(), AS_NAMESPACE_QUALIFIER asCALL_THISCALL);
-			AB_SCRIPT_ASSERT(r >= 0, std::string("Can't register accessor's 'get' method for type '" + name + "'").c_str(), AB_THROW, &instance.engine());
-
+			if(memb.hasSet())
+			{
+				MethodClass setf = memb.set();
+				r = instance.engine().asEngine()->RegisterObjectMethod(name.c_str(), setf.decompose().c_str(), setf.address(), AS_NAMESPACE_QUALIFIER asCALL_THISCALL);
+				AB_SCRIPT_ASSERT(r >= 0, std::string("Can't register accessor's 'set' method for type '" + name + "'").c_str(), AB_THROW, &instance.engine());
+			}
+			if(memb.hasGet())
+			{
+				MethodClass getf = memb.get();
+				r = instance.engine().asEngine()->RegisterObjectMethod(name.c_str(), getf.decompose().c_str(), getf.address(), AS_NAMESPACE_QUALIFIER asCALL_THISCALL);
+				AB_SCRIPT_ASSERT(r >= 0, std::string("Can't register accessor's 'get' method for type '" + name + "'").c_str(), AB_THROW, &instance.engine());
+			}
+	
 			this->_accessors.pop();
 		}
 
@@ -2536,11 +2650,32 @@ public:
 	///
 	/// Accessor functions
 	///
-
 	template<typename V>
 	ClassExporter& property(std::string name, V (T::*getf)() const, void (T::*setf)(V))
 	{
 		AccessorClass access(name, Type<V>::toString(), AB_METHOD(T, () const, V, getf), AB_METHOD(T, (V), void, setf));
+		this->_accessors.push(access);
+		return *this;
+	}
+
+	///
+	/// Registers a read-only property
+	///
+	template<typename V>
+	ClassExporter& property_reader(std::string name, V (T::*getf)() const)
+	{
+		AccessorClass access(name, Type<V>::toString(), AccessorClass::ReadOnly, AB_METHOD(T, () const, V, getf));
+		this->_accessors.push(access);
+		return *this;
+	}
+
+	///
+	/// Registers a write-only property
+	///
+	template<typename V>
+	ClassExporter& property_writer(std::string name, void (T::*getf)(V))
+	{
+		AccessorClass access(name, Type<V>::toString(), AccessorClass::WriteOnly, AB_METHOD(T, (V), void, setf));
 		this->_accessors.push(access);
 		return *this;
 	}

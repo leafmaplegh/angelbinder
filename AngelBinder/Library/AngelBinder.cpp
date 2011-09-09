@@ -7,7 +7,10 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 //
 
+#if defined(_WIN32)
 #include <windows.h>
+#endif
+
 #include <angelbinder.h>
 
 #pragma warning(disable: 4355)
@@ -77,18 +80,16 @@ void __cdecl Engine::onScriptMessage( const asSMessageInfo *msg, void *param )
 	}
 }
 
-Engine::Engine(int contexts)
+Engine::Engine()
 	: _builder(NULL), _engine(NULL), _messages(NULL), _pool(this)
 {
 	this->initialize();
-	this->_pool.initialize(contexts);
 }
 
-Engine::Engine( MessageCallback callback, int contexts )
+Engine::Engine( MessageCallback callback )
 	: _builder(NULL), _engine(NULL), _messages(callback), _pool(this)
 {
 	this->initialize();
-	this->_pool.initialize(contexts);
 }
 
 Engine::~Engine()
@@ -145,6 +146,15 @@ Context* Engine::getContext(int function)
 	Context* context = this->_pool.get();
 	context->prepare(function);
 	return context;
+}
+
+void Engine::sleep( int ms )
+{
+#if defined(_WIN32)
+	Sleep(ms);
+#else
+	#error You must provide a proper "sleep" implementation here
+#endif
 }
 
 /**
@@ -440,7 +450,7 @@ void Context::release()
 }
 
 ContextPool::ContextPool( Engine* engine ) 
-	: _releasing(false), _initialized(false), _availableCount(0), _engine(engine)
+	: _releasing(false), _availableCount(0), _engine(engine)
 {
 
 }
@@ -461,49 +471,77 @@ Engine* ContextPool::engine()
 
 void ContextPool::wait()
 {
-	while(!this->_availableCount != this->_contexts.size())	{
-		Sleep(50);
-	}
-}
-
-void ContextPool::initialize( int count )
-{
-	if(!this->_initialized)
+	while(this->_availableCount != this->_contexts.size())	
 	{
-		this->_initialized = true;
-		for(int i = 0; i < count; i++)
-		{
-			Context* ctx = new Context(*this, i);
-			this->_contexts.push_back(ctx);
-			this->_available.push(i);
-			InterlockedIncrement(&this->_availableCount);
-		}
-	}
-	else
-	{
-		throw std::exception("Context pool already initialized.");
+		Engine::sleep(10);
 	}
 }
 
 void ContextPool::ret( int id )
 {
+	ScopedLocker locker(this->_locker);
 	this->_available.push(id);
-	InterlockedIncrement(&this->_availableCount);
+	this->_availableCount++;
 }
 
 Context* ContextPool::get()
 {
-	if(this->_releasing || !this->_initialized) {
+	ScopedLocker locker(this->_locker);
+	if(this->_releasing) 
+	{
 		return NULL;
 	}
+
 	int id = -1;
-	Context* context = NULL;
-	while(!this->_available.try_pop(id))
+	if(!this->_available.try_pop(id))
 	{
-		Sleep(10);
+		Context* context = new Context(*this, this->_contexts.size());
+		this->_contexts.push_back(context);
+		return context;
 	}
-	InterlockedDecrement(&this->_availableCount);
+	else
+	{
+		this->_availableCount--;
+		return this->_contexts[id];
+	}
+
 	return this->_contexts.at(id);
+}
+
+#if defined(_WIN32)
+
+ThreadLocker::ThreadLocker()
+{
+	InitializeCriticalSection(&this->_section);
+}
+
+ThreadLocker::~ThreadLocker()
+{
+	DeleteCriticalSection(&this->_section);
+}
+
+void ThreadLocker::lock()
+{
+	EnterCriticalSection(&this->_section);
+}
+
+void ThreadLocker::unlock()
+{
+	LeaveCriticalSection(&this->_section);
+}
+
+#else 
+#error You must provide a proper threadlocker implementation
+#endif
+
+ScopedLocker::ScopedLocker( ThreadLocker& locker ) : _locker(locker)
+{
+	this->_locker.lock();
+}
+
+ScopedLocker::~ScopedLocker()
+{
+	this->_locker.unlock();
 }
 
 AB_END_NAMESPACE

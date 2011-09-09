@@ -7,7 +7,10 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 //
 
+#include <windows.h>
 #include <angelbinder.h>
+
+#pragma warning(disable: 4355)
 
 #define AB_INIT_CHECK()		AB_SCRIPT_ASSERT(this->_engine != NULL && this->_builder != NULL, "Script not initialized.", AB_THROW, this)
 #define AB_UNINIT_CHECK()	AB_SCRIPT_ASSERT(this->_engine == NULL && this->_builder == NULL, "Script already initialized.", AB_THROW, this)
@@ -39,7 +42,6 @@ void Engine::initialize()
 
 void Engine::uninitialize()
 {
-	this->_functions.clear();
 	if(this->_builder != NULL)
 	{
 		delete this->_builder;
@@ -75,16 +77,18 @@ void __cdecl Engine::onScriptMessage( const asSMessageInfo *msg, void *param )
 	}
 }
 
-Engine::Engine()
-	: _builder(NULL), _engine(NULL), _messages(NULL)
+Engine::Engine(int contexts)
+	: _builder(NULL), _engine(NULL), _messages(NULL), _pool(this)
 {
 	this->initialize();
+	this->_pool.initialize(contexts);
 }
 
-Engine::Engine( MessageCallback callback )
-	: _builder(NULL), _engine(NULL), _messages(callback)
+Engine::Engine( MessageCallback callback, int contexts )
+	: _builder(NULL), _engine(NULL), _messages(callback), _pool(this)
 {
 	this->initialize();
+	this->_pool.initialize(contexts);
 }
 
 Engine::~Engine()
@@ -134,6 +138,13 @@ Module* Engine::getModule( std::string name )
 	{
 		throw std::exception("Couldn't create script module instance.");
 	}
+}
+
+Context* Engine::getContext(int function)
+{
+	Context* context = this->_pool.get();
+	context->prepare(function);
+	return context;
 }
 
 /**
@@ -309,12 +320,12 @@ void DummyDestructor( void* memory )
 }
 
 
-Context::Context( Engine& engine, int function ) : _engine(engine), _function(function), _params(0)
+Context::Context(ContextPool& pool, int id) 
+	: _pool(pool), _params(0), _id(id)
 {
-	this->_context = engine.asEngine()->CreateContext();
-	AB_SCRIPT_ASSERT(this->_context != NULL, "Context couldn't be created.", AB_THROW, &engine);
+	this->_context = pool.engine()->asEngine()->CreateContext();
+	AB_SCRIPT_ASSERT(this->_context != NULL, "Context couldn't be created.", AB_THROW, pool.engine());
 	this->_context->SetExceptionCallback(asMETHOD(Context, exceptionCallback), this, asCALL_THISCALL);
-	this->_context->Prepare(function);
 }
 
 Context::~Context()
@@ -334,7 +345,7 @@ void Context::exceptionCallback( asIScriptContext *context )
 void Context::execute()
 {
 	int r = this->_context->Execute();
-	AB_SCRIPT_ASSERT(r == asEXECUTION_FINISHED, "Error executing call to script.", AB_THROW, &this->_engine);
+	AB_SCRIPT_ASSERT(r == asEXECUTION_FINISHED, "Error executing call to script.", AB_THROW, this->_pool.engine());
 }
 
 void Context::setAddress( void* value )
@@ -415,6 +426,84 @@ float Context::readFloat()
 double Context::readDouble()
 {
 	return this->_context->GetReturnDouble();
+}
+
+void Context::prepare( int function )
+{
+	this->_params = 0;
+	this->_context->Prepare(function);
+}
+
+void Context::release()
+{
+	this->_pool.ret(this->_id);
+}
+
+ContextPool::ContextPool( Engine* engine ) 
+	: _releasing(false), _initialized(false), _availableCount(0), _engine(engine)
+{
+
+}
+
+ContextPool::~ContextPool()
+{
+	this->_releasing = true;
+	this->wait();
+	std::for_each(this->_contexts.begin(), this->_contexts.end(), [] (Context* ctx) {
+		delete ctx;
+	});
+}
+
+Engine* ContextPool::engine()
+{
+	return this->_engine;
+}
+
+void ContextPool::wait()
+{
+	while(!this->_availableCount != this->_contexts.size())	{
+		Sleep(50);
+	}
+}
+
+void ContextPool::initialize( int count )
+{
+	if(!this->_initialized)
+	{
+		this->_initialized = true;
+		for(int i = 0; i < count; i++)
+		{
+			Context* ctx = new Context(*this, i);
+			this->_contexts.push_back(ctx);
+			this->_available.push(i);
+			InterlockedIncrement(&this->_availableCount);
+		}
+	}
+	else
+	{
+		throw std::exception("Context pool already initialized.");
+	}
+}
+
+void ContextPool::ret( int id )
+{
+	this->_available.push(id);
+	InterlockedIncrement(&this->_availableCount);
+}
+
+Context* ContextPool::get()
+{
+	if(this->_releasing || !this->_initialized) {
+		return NULL;
+	}
+	int id = -1;
+	Context* context = NULL;
+	while(!this->_available.try_pop(id))
+	{
+		Sleep(10);
+	}
+	InterlockedDecrement(&this->_availableCount);
+	return this->_contexts.at(id);
 }
 
 AB_END_NAMESPACE

@@ -29,19 +29,16 @@
     <ClInclude Include="targetver.h">
       <Filter>System</Filter>
     </ClInclude>
-    <ClInclude Include="AngelBinder.h">
-      <Filter>AngelBinder\Addon</Filter>
-    </ClInclude>
     <ClInclude Include="tests.h">
       <Filter>AngelBinder\Examples\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Library\AngelBinder.h">
+      <Filter>AngelBinder\Addon</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
       <Filter>System</Filter>
-    </ClCompile>
-    <ClCompile Include="AngelBinder.cpp">
-      <Filter>AngelBinder\Addon</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>AngelBinder\Examples</Filter>
@@ -51,6 +48,9 @@
     </ClCompile>
     <ClCompile Include="tests.cpp">
       <Filter>AngelBinder\Examples\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Library\AngelBinder.cpp">
+      <Filter>AngelBinder\Addon</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

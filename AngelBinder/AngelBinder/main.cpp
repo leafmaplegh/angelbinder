@@ -17,6 +17,6 @@ int pause()
 {
 	std::cin.clear();
 	std::cout << std::endl << "Press enter to continue...\n";
-	std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+	std::cin.ignore(1i64, '\n');
 	return 0;
 }

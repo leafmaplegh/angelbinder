@@ -14,17 +14,10 @@
 #include <hash_map>
 #include <sstream>
 #include <string>
-#include <functional>
+#include <concurrent_queue.h>
 #include <angelscript.h>
 #include <scriptbuilder.h>
-
-/// 
-/// Define the binder to not use namespaces
-/// #define AB_NO_NAMESPACE
-/// 
-/// Define the binder to use libobs library (http://code.google.com/p/libobs/)
-/// #define AB_USE_EVENTSYSTEM
-/// 
+#include <windows.h>
 
 #ifdef AS_USE_NAMESPACE
 #define AB_BEGIN_NAMESPACE		namespace AngelBinder {
@@ -41,9 +34,9 @@
 ///
 AB_BEGIN_NAMESPACE
 
-	///
-	/// Macro definitions
-	///
+///
+/// Macro definitions
+///
 #define AB_THROW		true
 #define AB_NOTHROW		false
 
@@ -216,48 +209,106 @@ typedef AS_NAMESPACE_QUALIFIER asIScriptModule	ASModule;
 typedef AS_NAMESPACE_QUALIFIER CScriptBuilder	ASBuilder;
 
 /// Empty declaration to use as pointer into the engine
+class Engine;
 class Module;
+class Contex;
+
+///
+/// Context pool class
+///
+class ContextPool
+{
+
+	///
+	/// Friend classes
+	///
+	friend class Context;
+	friend class Engine;
+
+private:
+	/// Stores the engine instance
+	Engine* _engine;
+
+	/// Stores the list of pre-allocated contexts
+	std::vector<Context*> _contexts;
+
+	/// Stores the queue of available contexts
+	Concurrency::concurrent_queue<int> _available;
+
+	/// Stores the current count of items on the queue
+	volatile unsigned int _availableCount;
+
+	/// Stores if the class is being released
+	bool _releasing;
+
+	/// Stores if the pool has been initialized
+	bool _initialized;
+
+protected:
+	///
+	/// Constructors / destructors
+	///
+	ContextPool(Engine* engine);
+	~ContextPool();
+
+	///
+	/// Engine instance
+	///
+	Engine* engine();
+
+	///
+	/// Initializes the context pool
+	///
+	void initialize(int count);
+
+	///
+	/// Returns a context to the queue
+	///
+	void ret(int id);
+
+	///
+	/// Retrieves a context from the pool
+	///
+	Context* get();
+
+private:
+	///
+	/// Waits for all contexts to be available again into the pool
+	///
+	void wait();
+
+};
 
 ///
 /// Script engine
 ///
 class Engine
 {
+
+	template<typename F>
+	friend class Function;
+
 public:
-	///
 	/// Script engine's message callback
-	///
 	typedef void(*MessageCallback)(Engine*, std::string);
 
 private:
-	///
 	/// Script Engine Instance
-	///
 	ASEngine* _engine;
 
-	///
 	/// Script Engine Builder
-	///
 	ASBuilder* _builder;
 
-	///
 	/// Message callbacks
-	///
 	MessageCallback _messages;
 
-	///
-	/// FunctionClass caching
-	///
-	std::hash_map<std::string, int> _functions;
-
-	///
 	/// Modules
-	///
 	std::hash_map<std::string, Module*> _modules;
 
-	///
+	/// Stores the context pool
+	ContextPool _pool;
+
 	/// Raised when script machine writes a message
-	///
 	static void __cdecl onScriptMessage( const AS_NAMESPACE_QUALIFIER asSMessageInfo *msg, void *param );
 
 	///
@@ -270,8 +321,8 @@ public:
 	///
 	/// Constructors / destructors
 	///
-	Engine();
-	Engine(MessageCallback callback);
+	Engine(int contexts = 4);
+	Engine(MessageCallback callback, int contexts = 4);
 	~Engine();
 
 	///
@@ -295,6 +346,12 @@ public:
 	///
 	Module* getModule(std::string name);
 
+protected:
+	///
+	/// Retrieves a context from the pool
+	///
+	Context* getContext(int function);
+
 };
 
 ///
@@ -306,9 +363,12 @@ class Context
 	template<typename T>
 	friend class Function;
 
+	/// Friend pool class
+	friend class ContextPool;
+
 private:
-	/// Selected function to execute
-	int _function;
+	/// Stores the current context id (from pool)
+	int _id;
 
 	/// Count of parameters set to this context
 	int _params;
@@ -317,13 +377,13 @@ private:
 	ASContext* _context;
 
 	/// Engine instance
-	Engine& _engine;
+	ContextPool& _pool;
 
 protected:
 	///
 	/// Creates a new context
 	///
-	Context(Engine& engine, int function);
+	Context(ContextPool& engine, int id);
 
 	///
 	/// Releases the context
@@ -340,6 +400,16 @@ public:
 	/// Executes the context
 	///
 	void execute();
+
+	///
+	/// Prepares the execution of the context
+	///
+	void prepare(int function);
+
+	///
+	/// Release this context
+	///
+	void release();
 
 	///
 	/// Parameter setters
@@ -537,7 +607,6 @@ class Function
 /// Function definitions
 ///
 
-
 template<>
 class Function<void()>
 {    
@@ -545,9 +614,10 @@ class Function<void()>
 public:
 	void operator()()
 	{
-		Context ctx(this->_engine, this->_function);
+		Context* ctx = this->_engine.getContext(this->_function);
 
-		ctx.execute();
+		ctx->execute();
+		ctx->release();
 	}
 	static std::string decompose(std::string name)
 	{
@@ -564,10 +634,11 @@ class Function<R()>
 public:
 	R operator()()
 	{
-		Context ctx(this->_engine, this->_function);
-
-		ctx.execute();
-		return ReturnReader<R>()(&ctx);
+		Context* ctx = this->_engine.getContext(this->_function);
+		ctx->execute();
+		R ret = ReturnReader<R>()(ctx); 
+		ctx->release();
+		return ret;
 	}
 	static std::string decompose(std::string name)
 	{
@@ -584,9 +655,10 @@ class Function<void(A1)>
 public:
 	void operator()(A1 a1)
 	{
-		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1); 
-		ctx.execute();
+		Context* ctx = this->_engine.getContext(this->_function);
+		ParameterSetter<A1>()(ctx, a1); 
+		ctx->execute();
+		ctx->release();
 	}
 	static std::string decompose(std::string name)
 	{
@@ -603,10 +675,12 @@ class Function<R(A1)>
 public:
 	R operator()(A1 a1)
 	{
-		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1); 
-		ctx.execute();
-		return ReturnReader<R>()(&ctx);
+		Context* ctx = this->_engine.getContext(this->_function);
+		ParameterSetter<A1>()(ctx, a1); 
+		ctx->execute();
+		R ret = ReturnReader<R>()(ctx); 
+		ctx->release();
+		return ret;
 	}
 	static std::string decompose(std::string name)
 	{
@@ -623,9 +697,10 @@ class Function<void(A1, A2)>
 public:
 	void operator()(A1 a1, A2 a2)
 	{
-		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); 
-		ctx.execute();
+		Context* ctx = this->_engine.getContext(this->_function);
+		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); 
+		ctx->execute();
+		ctx->release();
 	}
 	static std::string decompose(std::string name)
 	{
@@ -642,10 +717,12 @@ class Function<R(A1, A2)>
 public:
 	R operator()(A1 a1, A2 a2)
 	{
-		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); 
-		ctx.execute();
-		return ReturnReader<R>()(&ctx);
+		Context* ctx = this->_engine.getContext(this->_function);
+		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); 
+		ctx->execute();
+		R ret = ReturnReader<R>()(ctx); 
+		ctx->release();
+		return ret;
 	}
 	static std::string decompose(std::string name)
 	{
@@ -662,9 +739,10 @@ class Function<void(A1, A2, A3)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3)
 	{
-		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); 
-		ctx.execute();
+		Context* ctx = this->_engine.getContext(this->_function);
+		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); 
+		ctx->execute();
+		ctx->release();
 	}
 	static std::string decompose(std::string name)
 	{
@@ -681,10 +759,12 @@ class Function<R(A1, A2, A3)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3)
 	{
-		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); 
-		ctx.execute();
-		return ReturnReader<R>()(&ctx);
+		Context* ctx = this->_engine.getContext(this->_function);
+		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); 
+		ctx->execute();
+		R ret = ReturnReader<R>()(ctx); 
+		ctx->release();
+		return ret;
 	}
 	static std::string decompose(std::string name)
 	{
@@ -701,9 +781,10 @@ class Function<void(A1, A2, A3, A4)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4)
 	{
-		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); 
-		ctx.execute();
+		Context* ctx = this->_engine.getContext(this->_function);
+		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); 
+		ctx->execute();
+		ctx->release();
 	}
 	static std::string decompose(std::string name)
 	{
@@ -720,10 +801,12 @@ class Function<R(A1, A2, A3, A4)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4)
 	{
-		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); 
-		ctx.execute();
-		return ReturnReader<R>()(&ctx);
+		Context* ctx = this->_engine.getContext(this->_function);
+		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); 
+		ctx->execute();
+		R ret = ReturnReader<R>()(ctx); 
+		ctx->release();
+		return ret;
 	}
 	static std::string decompose(std::string name)
 	{
@@ -740,9 +823,10 @@ class Function<void(A1, A2, A3, A4, A5)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5)
 	{
-		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); 
-		ctx.execute();
+		Context* ctx = this->_engine.getContext(this->_function);
+		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); 
+		ctx->execute();
+		ctx->release();
 	}
 	static std::string decompose(std::string name)
 	{
@@ -759,10 +843,12 @@ class Function<R(A1, A2, A3, A4, A5)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5)
 	{
-		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); 
-		ctx.execute();
-		return ReturnReader<R>()(&ctx);
+		Context* ctx = this->_engine.getContext(this->_function);
+		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); 
+		ctx->execute();
+		R ret = ReturnReader<R>()(ctx); 
+		ctx->release();
+		return ret;
 	}
 	static std::string decompose(std::string name)
 	{
@@ -779,9 +865,10 @@ class Function<void(A1, A2, A3, A4, A5, A6)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6)
 	{
-		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); 
-		ctx.execute();
+		Context* ctx = this->_engine.getContext(this->_function);
+		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); 
+		ctx->execute();
+		ctx->release();
 	}
 	static std::string decompose(std::string name)
 	{
@@ -798,10 +885,12 @@ class Function<R(A1, A2, A3, A4, A5, A6)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6)
 	{
-		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); 
-		ctx.execute();
-		return ReturnReader<R>()(&ctx);
+		Context* ctx = this->_engine.getContext(this->_function);
+		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); 
+		ctx->execute();
+		R ret = ReturnReader<R>()(ctx); 
+		ctx->release();
+		return ret;
 	}
 	static std::string decompose(std::string name)
 	{
@@ -818,9 +907,10 @@ class Function<void(A1, A2, A3, A4, A5, A6, A7)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7)
 	{
-		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); 
-		ctx.execute();
+		Context* ctx = this->_engine.getContext(this->_function);
+		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); 
+		ctx->execute();
+		ctx->release();
 	}
 	static std::string decompose(std::string name)
 	{
@@ -837,10 +927,12 @@ class Function<R(A1, A2, A3, A4, A5, A6, A7)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7)
 	{
-		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); 
-		ctx.execute();
-		return ReturnReader<R>()(&ctx);
+		Context* ctx = this->_engine.getContext(this->_function);
+		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); 
+		ctx->execute();
+		R ret = ReturnReader<R>()(ctx); 
+		ctx->release();
+		return ret;
 	}
 	static std::string decompose(std::string name)
 	{
@@ -857,9 +949,10 @@ class Function<void(A1, A2, A3, A4, A5, A6, A7, A8)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8)
 	{
-		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); ParameterSetter<A8>()(&ctx, a8); 
-		ctx.execute();
+		Context* ctx = this->_engine.getContext(this->_function);
+		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); 
+		ctx->execute();
+		ctx->release();
 	}
 	static std::string decompose(std::string name)
 	{
@@ -876,10 +969,12 @@ class Function<R(A1, A2, A3, A4, A5, A6, A7, A8)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8)
 	{
-		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); ParameterSetter<A8>()(&ctx, a8); 
-		ctx.execute();
-		return ReturnReader<R>()(&ctx);
+		Context* ctx = this->_engine.getContext(this->_function);
+		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); 
+		ctx->execute();
+		R ret = ReturnReader<R>()(ctx); 
+		ctx->release();
+		return ret;
 	}
 	static std::string decompose(std::string name)
 	{
@@ -896,9 +991,10 @@ class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9)
 	{
-		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); ParameterSetter<A8>()(&ctx, a8); ParameterSetter<A9>()(&ctx, a9); 
-		ctx.execute();
+		Context* ctx = this->_engine.getContext(this->_function);
+		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); 
+		ctx->execute();
+		ctx->release();
 	}
 	static std::string decompose(std::string name)
 	{
@@ -915,10 +1011,12 @@ class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9)
 	{
-		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); ParameterSetter<A8>()(&ctx, a8); ParameterSetter<A9>()(&ctx, a9); 
-		ctx.execute();
-		return ReturnReader<R>()(&ctx);
+		Context* ctx = this->_engine.getContext(this->_function);
+		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); 
+		ctx->execute();
+		R ret = ReturnReader<R>()(ctx); 
+		ctx->release();
+		return ret;
 	}
 	static std::string decompose(std::string name)
 	{
@@ -935,9 +1033,10 @@ class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10)
 	{
-		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); ParameterSetter<A8>()(&ctx, a8); ParameterSetter<A9>()(&ctx, a9); ParameterSetter<A10>()(&ctx, a10); 
-		ctx.execute();
+		Context* ctx = this->_engine.getContext(this->_function);
+		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); 
+		ctx->execute();
+		ctx->release();
 	}
 	static std::string decompose(std::string name)
 	{
@@ -954,10 +1053,12 @@ class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10)
 	{
-		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); ParameterSetter<A8>()(&ctx, a8); ParameterSetter<A9>()(&ctx, a9); ParameterSetter<A10>()(&ctx, a10); 
-		ctx.execute();
-		return ReturnReader<R>()(&ctx);
+		Context* ctx = this->_engine.getContext(this->_function);
+		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); 
+		ctx->execute();
+		R ret = ReturnReader<R>()(ctx); 
+		ctx->release();
+		return ret;
 	}
 	static std::string decompose(std::string name)
 	{
@@ -974,9 +1075,10 @@ class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11)
 	{
-		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); ParameterSetter<A8>()(&ctx, a8); ParameterSetter<A9>()(&ctx, a9); ParameterSetter<A10>()(&ctx, a10); ParameterSetter<A11>()(&ctx, a11); 
-		ctx.execute();
+		Context* ctx = this->_engine.getContext(this->_function);
+		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); ParameterSetter<A11>()(ctx, a11); 
+		ctx->execute();
+		ctx->release();
 	}
 	static std::string decompose(std::string name)
 	{
@@ -993,10 +1095,12 @@ class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11)
 	{
-		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); ParameterSetter<A8>()(&ctx, a8); ParameterSetter<A9>()(&ctx, a9); ParameterSetter<A10>()(&ctx, a10); ParameterSetter<A11>()(&ctx, a11); 
-		ctx.execute();
-		return ReturnReader<R>()(&ctx);
+		Context* ctx = this->_engine.getContext(this->_function);
+		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); ParameterSetter<A11>()(ctx, a11); 
+		ctx->execute();
+		R ret = ReturnReader<R>()(ctx); 
+		ctx->release();
+		return ret;
 	}
 	static std::string decompose(std::string name)
 	{
@@ -1013,9 +1117,10 @@ class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12)
 	{
-		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); ParameterSetter<A8>()(&ctx, a8); ParameterSetter<A9>()(&ctx, a9); ParameterSetter<A10>()(&ctx, a10); ParameterSetter<A11>()(&ctx, a11); ParameterSetter<A12>()(&ctx, a12); 
-		ctx.execute();
+		Context* ctx = this->_engine.getContext(this->_function);
+		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); ParameterSetter<A11>()(ctx, a11); ParameterSetter<A12>()(ctx, a12); 
+		ctx->execute();
+		ctx->release();
 	}
 	static std::string decompose(std::string name)
 	{
@@ -1032,10 +1137,12 @@ class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12)
 	{
-		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); ParameterSetter<A8>()(&ctx, a8); ParameterSetter<A9>()(&ctx, a9); ParameterSetter<A10>()(&ctx, a10); ParameterSetter<A11>()(&ctx, a11); ParameterSetter<A12>()(&ctx, a12); 
-		ctx.execute();
-		return ReturnReader<R>()(&ctx);
+		Context* ctx = this->_engine.getContext(this->_function);
+		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); ParameterSetter<A11>()(ctx, a11); ParameterSetter<A12>()(ctx, a12); 
+		ctx->execute();
+		R ret = ReturnReader<R>()(ctx); 
+		ctx->release();
+		return ret;
 	}
 	static std::string decompose(std::string name)
 	{
@@ -1052,9 +1159,10 @@ class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12, A13 a13)
 	{
-		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); ParameterSetter<A8>()(&ctx, a8); ParameterSetter<A9>()(&ctx, a9); ParameterSetter<A10>()(&ctx, a10); ParameterSetter<A11>()(&ctx, a11); ParameterSetter<A12>()(&ctx, a12); ParameterSetter<A13>()(&ctx, a13); 
-		ctx.execute();
+		Context* ctx = this->_engine.getContext(this->_function);
+		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); ParameterSetter<A11>()(ctx, a11); ParameterSetter<A12>()(ctx, a12); ParameterSetter<A13>()(ctx, a13); 
+		ctx->execute();
+		ctx->release();
 	}
 	static std::string decompose(std::string name)
 	{
@@ -1071,10 +1179,12 @@ class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12, A13 a13)
 	{
-		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); ParameterSetter<A8>()(&ctx, a8); ParameterSetter<A9>()(&ctx, a9); ParameterSetter<A10>()(&ctx, a10); ParameterSetter<A11>()(&ctx, a11); ParameterSetter<A12>()(&ctx, a12); ParameterSetter<A13>()(&ctx, a13); 
-		ctx.execute();
-		return ReturnReader<R>()(&ctx);
+		Context* ctx = this->_engine.getContext(this->_function);
+		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); ParameterSetter<A11>()(ctx, a11); ParameterSetter<A12>()(ctx, a12); ParameterSetter<A13>()(ctx, a13); 
+		ctx->execute();
+		R ret = ReturnReader<R>()(ctx); 
+		ctx->release();
+		return ret;
 	}
 	static std::string decompose(std::string name)
 	{
@@ -1091,9 +1201,10 @@ class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14)
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12, A13 a13, A14 a14)
 	{
-		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); ParameterSetter<A8>()(&ctx, a8); ParameterSetter<A9>()(&ctx, a9); ParameterSetter<A10>()(&ctx, a10); ParameterSetter<A11>()(&ctx, a11); ParameterSetter<A12>()(&ctx, a12); ParameterSetter<A13>()(&ctx, a13); ParameterSetter<A14>()(&ctx, a14); 
-		ctx.execute();
+		Context* ctx = this->_engine.getContext(this->_function);
+		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); ParameterSetter<A11>()(ctx, a11); ParameterSetter<A12>()(ctx, a12); ParameterSetter<A13>()(ctx, a13); ParameterSetter<A14>()(ctx, a14); 
+		ctx->execute();
+		ctx->release();
 	}
 	static std::string decompose(std::string name)
 	{
@@ -1110,10 +1221,12 @@ class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12, A13 a13, A14 a14)
 	{
-		Context ctx(this->_engine, this->_function);
-		ParameterSetter<A1>()(&ctx, a1); ParameterSetter<A2>()(&ctx, a2); ParameterSetter<A3>()(&ctx, a3); ParameterSetter<A4>()(&ctx, a4); ParameterSetter<A5>()(&ctx, a5); ParameterSetter<A6>()(&ctx, a6); ParameterSetter<A7>()(&ctx, a7); ParameterSetter<A8>()(&ctx, a8); ParameterSetter<A9>()(&ctx, a9); ParameterSetter<A10>()(&ctx, a10); ParameterSetter<A11>()(&ctx, a11); ParameterSetter<A12>()(&ctx, a12); ParameterSetter<A13>()(&ctx, a13); ParameterSetter<A14>()(&ctx, a14); 
-		ctx.execute();
-		return ReturnReader<R>()(&ctx);
+		Context* ctx = this->_engine.getContext(this->_function);
+		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); ParameterSetter<A11>()(ctx, a11); ParameterSetter<A12>()(ctx, a12); ParameterSetter<A13>()(ctx, a13); ParameterSetter<A14>()(ctx, a14); 
+		ctx->execute();
+		R ret = ReturnReader<R>()(ctx); 
+		ctx->release();
+		return ret;
 	}
 	static std::string decompose(std::string name)
 	{

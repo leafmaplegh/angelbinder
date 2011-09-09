@@ -40,4 +40,22 @@ TEST_START(functions)
 	int pow_res = pow(7, 3);
 	TEST_ASSERT(pow_res == 343, "Pow function failed.");
 
+	 /// POOOR timing algorithm, but it was was just for testing...
+	float avgtime = 0;
+	for(int t = 0; t < 15; t++)
+	{
+		DWORD time = 0;
+		DWORD start = GetTickCount();
+		for(int i = 0; i < 10000; i++) {
+			float f = sumf(i / 2.0f, i / 2.0f);
+		}
+		time = GetTickCount() - start;
+		avgtime += time;
+	}
+	avgtime /= 15.0f;
+
+	std::stringstream stream;
+	stream << "150.000 calls took " << avgtime << "ms to execute...";
+	TEST_LOG(stream.str());
+
 TEST_END

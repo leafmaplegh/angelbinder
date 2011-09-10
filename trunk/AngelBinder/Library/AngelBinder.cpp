@@ -398,6 +398,11 @@ void Context::setDouble( double value )
 	this->_context->SetArgDouble(this->_params++, value);
 }
 
+void Context::setBool( bool value )
+{
+	this->_context->SetArgByte(this->_params++, value ? 1 : 0);
+}
+
 void* Context::readAddress()
 {
 	return this->_context->GetReturnAddress();
@@ -436,6 +441,11 @@ float Context::readFloat()
 double Context::readDouble()
 {
 	return this->_context->GetReturnDouble();
+}
+
+bool Context::readBool()
+{
+	return (bool)(this->_context->GetReturnByte() > 0);
 }
 
 void Context::prepare( int function )

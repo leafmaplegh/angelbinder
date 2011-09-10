@@ -37,9 +37,9 @@
 ///
 AB_BEGIN_NAMESPACE
 
-///
-/// Macro definitions
-///
+	///
+	/// Macro definitions
+	///
 #define AB_THROW		true
 #define AB_NOTHROW		false
 
@@ -48,11 +48,11 @@ AB_BEGIN_NAMESPACE
 
 #define AB_SCRIPT_ASSERT(x,m,t,i) { \
 	if(!(x)) { \
-		if((t)) { \
-			throw std::exception(m); \
-		} else { \
-			AB_MESSAGE_INVOKE_STATIC(##i, ##i, ##m); \
-		} \
+	if((t)) { \
+	throw std::exception(m); \
+	} else { \
+	AB_MESSAGE_INVOKE_STATIC(##i, ##i, ##m); \
+	} \
 	} \
 }
 
@@ -62,10 +62,10 @@ AB_BEGIN_NAMESPACE
 #define AB_FUNCTIONPR(f,p,r)	AS_NAMESPACE_QUALIFIER asFUNCTIONPR(##f, ##p, ##r)
 #define AB_METHOD(c,p,r,ptr)	AS_NAMESPACE_QUALIFIER asSMethodPtr<sizeof(void (c::*)())>::Convert(AS_METHOD_AMBIGUITY_CAST(r (c::*)p)(ptr))
 
-///
-/// Type name string conversion
-///
-template<typename T>
+	///
+	/// Type name string conversion
+	///
+	template<typename T>
 struct TypeString
 {
 	///
@@ -82,59 +82,59 @@ struct TypeString
 ///
 #define AB_TRANSLATE_TYPE(t,n) \
 	template<> \
-	struct AB_NAMESPACE_QUALIFIER TypeString<t> \
-	{ \
-		static std::string value() \
-		{ \
-			return n; \
-		} \
-	}; 
+struct AB_NAMESPACE_QUALIFIER TypeString<t> \
+{ \
+	static std::string value() \
+{ \
+	return n; \
+} \
+}; 
 
 ///
 /// Macro to help declaring parameter setters.
 ///
 #define AB_PARAMETER_SETTER(t,f) \
 	template<> \
-	struct ParameterSetter<t> \
-	{ \
-		void operator()(Context* context, t value) \
-		{ \
-			context->f(value); \
-		} \
-	}; 
+struct ParameterSetter<t> \
+{ \
+	void operator()(Context* context, t value) \
+{ \
+	context->f(value); \
+} \
+}; 
 
 ///
 /// Macro to help declaring return value readers.
 ///
 #define AB_RETURN_READER(t,f) \
 	template<> \
-	struct ReturnReader<t> \
-	{ \
-		t operator()(Context* context) \
-		{ \
-			return (t)context->f(); \
-		} \
-	}; 
+struct ReturnReader<t> \
+{ \
+	t operator()(Context* context) \
+{ \
+	return (t)context->f(); \
+} \
+}; 
 
 ///
 /// Built-in type definition
 ///
 AB_TRANSLATE_TYPE(char, "int8")
-AB_TRANSLATE_TYPE(unsigned char, "uint8")
-AB_TRANSLATE_TYPE(short, "int16")
-AB_TRANSLATE_TYPE(unsigned short, "uint16")
-AB_TRANSLATE_TYPE(int, "int")
-AB_TRANSLATE_TYPE(unsigned int, "uint")
-AB_TRANSLATE_TYPE(long long, "int64")
-AB_TRANSLATE_TYPE(unsigned long long, "uint64")
-AB_TRANSLATE_TYPE(float, "float")
-AB_TRANSLATE_TYPE(double, "double")
-AB_TRANSLATE_TYPE(bool, "bool")
+	AB_TRANSLATE_TYPE(unsigned char, "uint8")
+	AB_TRANSLATE_TYPE(short, "int16")
+	AB_TRANSLATE_TYPE(unsigned short, "uint16")
+	AB_TRANSLATE_TYPE(int, "int")
+	AB_TRANSLATE_TYPE(unsigned int, "uint")
+	AB_TRANSLATE_TYPE(long long, "int64")
+	AB_TRANSLATE_TYPE(unsigned long long, "uint64")
+	AB_TRANSLATE_TYPE(float, "float")
+	AB_TRANSLATE_TYPE(double, "double")
+	AB_TRANSLATE_TYPE(bool, "bool")
 
-///
-/// Base type class used to convert template into strings.
-///
-template<typename T>
+	///
+	/// Base type class used to convert template into strings.
+	///
+	template<typename T>
 struct Type
 {
 	static std::string toString()
@@ -226,7 +226,7 @@ private:
 #if defined(_WIN32)
 	CRITICAL_SECTION _section;
 #else 
-	#error You must provide a proper implementation of a thread locker
+#error You must provide a proper implementation of a thread locker
 #endif
 
 public:
@@ -401,7 +401,7 @@ public:
 	///
 	static void sleep(int ms);
 
-//protected:
+	//protected:
 	///
 	/// Retrieves a context from the pool
 	///
@@ -634,21 +634,23 @@ AB_RETURN_READER(unsigned long long, readQWord);
 AB_RETURN_READER(float, readFloat);
 AB_RETURN_READER(double, readDouble);
 
+#define AB_FUNCTION_CHECK() if(this->_engine == NULL || this->_function == -1) throw std::exception("Script function pointer not initialized.")
+
 #define AB_FUNCTION_CONSTRUCTOR() \
-		friend class Module; \
+	friend class Module; \
 	private: \
-		int _function; \
-		Engine* _engine; \
+	int _function; \
+	Engine* _engine; \
 	public: \
-		Function() \
-			: _engine(NULL), _function(-1) \
-		{ \
-		} \
+	Function() \
+	: _engine(NULL), _function(-1) \
+{ \
+} \
 	protected: \
-		Function(Engine* engine, int function) \
-			: _engine(engine), _function(function) \
-		{ \
-		}
+	Function(Engine* engine, int function) \
+	: _engine(engine), _function(function) \
+{ \
+}
 
 ///
 /// Dummy function class
@@ -674,8 +676,8 @@ class Function<void()>
 public:
 	void operator()()
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
-
 		ctx->execute();
 		ctx->release();
 	}
@@ -694,7 +696,9 @@ class Function<R()>
 public:
 	R operator()()
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
+
 		ctx->execute();
 		R ret = ReturnReader<R>()(ctx); 
 		ctx->release();
@@ -715,6 +719,7 @@ class Function<void(A1)>
 public:
 	void operator()(A1 a1)
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); 
 		ctx->execute();
@@ -735,6 +740,7 @@ class Function<R(A1)>
 public:
 	R operator()(A1 a1)
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); 
 		ctx->execute();
@@ -757,6 +763,7 @@ class Function<void(A1, A2)>
 public:
 	void operator()(A1 a1, A2 a2)
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); 
 		ctx->execute();
@@ -777,6 +784,7 @@ class Function<R(A1, A2)>
 public:
 	R operator()(A1 a1, A2 a2)
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); 
 		ctx->execute();
@@ -799,6 +807,7 @@ class Function<void(A1, A2, A3)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3)
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); 
 		ctx->execute();
@@ -819,6 +828,7 @@ class Function<R(A1, A2, A3)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3)
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); 
 		ctx->execute();
@@ -841,6 +851,7 @@ class Function<void(A1, A2, A3, A4)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4)
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); 
 		ctx->execute();
@@ -861,6 +872,7 @@ class Function<R(A1, A2, A3, A4)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4)
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); 
 		ctx->execute();
@@ -883,6 +895,7 @@ class Function<void(A1, A2, A3, A4, A5)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5)
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); 
 		ctx->execute();
@@ -903,6 +916,7 @@ class Function<R(A1, A2, A3, A4, A5)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5)
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); 
 		ctx->execute();
@@ -925,6 +939,7 @@ class Function<void(A1, A2, A3, A4, A5, A6)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6)
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); 
 		ctx->execute();
@@ -945,6 +960,7 @@ class Function<R(A1, A2, A3, A4, A5, A6)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6)
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); 
 		ctx->execute();
@@ -967,6 +983,7 @@ class Function<void(A1, A2, A3, A4, A5, A6, A7)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7)
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); 
 		ctx->execute();
@@ -987,6 +1004,7 @@ class Function<R(A1, A2, A3, A4, A5, A6, A7)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7)
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); 
 		ctx->execute();
@@ -1009,6 +1027,7 @@ class Function<void(A1, A2, A3, A4, A5, A6, A7, A8)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8)
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); 
 		ctx->execute();
@@ -1029,6 +1048,7 @@ class Function<R(A1, A2, A3, A4, A5, A6, A7, A8)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8)
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); 
 		ctx->execute();
@@ -1051,6 +1071,7 @@ class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9)
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); 
 		ctx->execute();
@@ -1071,6 +1092,7 @@ class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9)
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); 
 		ctx->execute();
@@ -1093,6 +1115,7 @@ class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10)
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); 
 		ctx->execute();
@@ -1113,6 +1136,7 @@ class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10)
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); 
 		ctx->execute();
@@ -1135,6 +1159,7 @@ class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11)
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); ParameterSetter<A11>()(ctx, a11); 
 		ctx->execute();
@@ -1155,6 +1180,7 @@ class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11)
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); ParameterSetter<A11>()(ctx, a11); 
 		ctx->execute();
@@ -1177,6 +1203,7 @@ class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12)
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); ParameterSetter<A11>()(ctx, a11); ParameterSetter<A12>()(ctx, a12); 
 		ctx->execute();
@@ -1197,6 +1224,7 @@ class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12)
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); ParameterSetter<A11>()(ctx, a11); ParameterSetter<A12>()(ctx, a12); 
 		ctx->execute();
@@ -1219,6 +1247,7 @@ class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12, A13 a13)
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); ParameterSetter<A11>()(ctx, a11); ParameterSetter<A12>()(ctx, a12); ParameterSetter<A13>()(ctx, a13); 
 		ctx->execute();
@@ -1239,6 +1268,7 @@ class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12, A13 a13)
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); ParameterSetter<A11>()(ctx, a11); ParameterSetter<A12>()(ctx, a12); ParameterSetter<A13>()(ctx, a13); 
 		ctx->execute();
@@ -1261,6 +1291,7 @@ class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14)
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12, A13 a13, A14 a14)
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); ParameterSetter<A11>()(ctx, a11); ParameterSetter<A12>()(ctx, a12); ParameterSetter<A13>()(ctx, a13); ParameterSetter<A14>()(ctx, a14); 
 		ctx->execute();
@@ -1281,6 +1312,7 @@ class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12, A13 a13, A14 a14)
 	{
+		AB_FUNCTION_CHECK();
 		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); ParameterSetter<A11>()(ctx, a11); ParameterSetter<A12>()(ctx, a12); ParameterSetter<A13>()(ctx, a13); ParameterSetter<A14>()(ctx, a14); 
 		ctx->execute();
@@ -2073,10 +2105,10 @@ protected:
 	///
 	AccessorClass(std::string name, std::string type, AS_NAMESPACE_QUALIFIER asSFuncPtr getfunc, AS_NAMESPACE_QUALIFIER asSFuncPtr setfunc) 
 		: _name(name), 
-		  _getfunc("get_" + name, type, getfunc), 
-		  _setfunc("set_" + name, "void", setfunc), 
-		  _getfuncset(true),
-		  _setfuncset(true)
+		_getfunc("get_" + name, type, getfunc), 
+		_setfunc("set_" + name, "void", setfunc), 
+		_getfuncset(true),
+		_setfuncset(true)
 	{
 		this->_setfunc.parameters().push_back(type);
 	}
@@ -2086,10 +2118,10 @@ protected:
 	///
 	AccessorClass(std::string name, std::string type, AcessorType acessortype, AS_NAMESPACE_QUALIFIER asSFuncPtr func) 
 		: _name(name),
-		  _getfunc("get_" + name, type, func), 
-		  _setfunc("set_" + name, "void", func), 
-		  _getfuncset(acessortype == ReadOnly),
-		  _setfuncset(acessortype == WriteOnly)
+		_getfunc("get_" + name, type, func), 
+		_setfunc("set_" + name, "void", func), 
+		_getfuncset(acessortype == ReadOnly),
+		_setfuncset(acessortype == WriteOnly)
 	{
 		if(acessortype == WriteOnly)
 		{
@@ -2331,7 +2363,7 @@ protected:
 				r = instance.engine().asEngine()->RegisterObjectMethod(name.c_str(), getf.decompose().c_str(), getf.address(), AS_NAMESPACE_QUALIFIER asCALL_THISCALL);
 				AB_SCRIPT_ASSERT(r >= 0, std::string("Can't register accessor's 'get' method for type '" + name + "'").c_str(), AB_THROW, &instance.engine());
 			}
-	
+
 			this->_accessors.pop();
 		}
 

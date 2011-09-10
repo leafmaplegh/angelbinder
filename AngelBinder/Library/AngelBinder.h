@@ -477,6 +477,7 @@ public:
 	void setQWord(unsigned long long value);
 	void setFloat(float value);
 	void setDouble(double value);
+	void setBool(bool value);
 
 	///
 	/// Return readers
@@ -489,6 +490,7 @@ public:
 	asQWORD readQWord();
 	float readFloat();
 	double readDouble();
+	bool readBool();
 
 };
 
@@ -562,6 +564,7 @@ AB_PARAMETER_SETTER(long long, setQWord);
 AB_PARAMETER_SETTER(unsigned long long, setQWord);
 AB_PARAMETER_SETTER(float, setFloat);
 AB_PARAMETER_SETTER(double, setDouble);
+AB_PARAMETER_SETTER(bool, setBool);
 
 ///
 /// Parameter setters
@@ -633,6 +636,7 @@ AB_RETURN_READER(long long, readQWord);
 AB_RETURN_READER(unsigned long long, readQWord);
 AB_RETURN_READER(float, readFloat);
 AB_RETURN_READER(double, readDouble);
+AB_RETURN_READER(bool, readBool);
 
 #define AB_FUNCTION_CHECK() if(this->_engine == NULL || this->_function == -1) throw std::exception("Script function pointer not initialized.")
 
@@ -1365,7 +1369,7 @@ public:
 	Function<F> getFunction(std::string name)
 	{
 		int funcid = this->getFunctionByDecl(Function<F>::decompose(name));
-		AB_SCRIPT_ASSERT(funcid >= 0, "Function could not be found.", AB_THROW, &this->_engine);
+		AB_SCRIPT_ASSERT(funcid >= 0, std::string("Function '" + Function<F>::decompose(name) + "' could not be found.").c_str(), AB_THROW, &this->_engine);
 		Function<F> func(&this->_engine, funcid);
 		return func;
 	}

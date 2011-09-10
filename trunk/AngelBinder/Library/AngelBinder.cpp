@@ -66,7 +66,7 @@ void __cdecl Engine::onScriptMessage( const asSMessageInfo *msg, void *param )
 		switch(msg->type)
 		{
 		case asMSGTYPE_ERROR:
-			stream << "[Script Error] ";
+			stream << "[Error] ";
 			break;
 		case asMSGTYPE_INFORMATION:
 			stream << "[Information] ";

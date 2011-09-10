@@ -11,7 +11,8 @@ TEST_START(functions)
 
 	std::string decomposition = Function<int(float,bool)>::decompose("function");
 
-	Function<int(int,int)> sumi = module->getFunction<int(int,int)>("sum");
+	Function<int(int,int)> sumi;
+	sumi = module->getFunction<int(int,int)>("sum");
 	Function<float(float,float)> sumf = module->getFunction<float(float,float)>("sum");
 	Function<int(int,int)> sub = module->getFunction<int(int,int)>("sub");
 	Function<int(int,int)> div = module->getFunction<int(int,int)>("div");

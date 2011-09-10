@@ -638,9 +638,14 @@ AB_RETURN_READER(double, readDouble);
 		friend class Module; \
 	private: \
 		int _function; \
-		Engine& _engine; \
+		Engine* _engine; \
+	public: \
+		Function() \
+			: _engine(NULL), _function(-1) \
+		{ \
+		} \
 	protected: \
-		Function(Engine& engine, int function) \
+		Function(Engine* engine, int function) \
 			: _engine(engine), _function(function) \
 		{ \
 		}
@@ -669,7 +674,7 @@ class Function<void()>
 public:
 	void operator()()
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 
 		ctx->execute();
 		ctx->release();
@@ -689,7 +694,7 @@ class Function<R()>
 public:
 	R operator()()
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ctx->execute();
 		R ret = ReturnReader<R>()(ctx); 
 		ctx->release();
@@ -710,7 +715,7 @@ class Function<void(A1)>
 public:
 	void operator()(A1 a1)
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); 
 		ctx->execute();
 		ctx->release();
@@ -730,7 +735,7 @@ class Function<R(A1)>
 public:
 	R operator()(A1 a1)
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); 
 		ctx->execute();
 		R ret = ReturnReader<R>()(ctx); 
@@ -752,7 +757,7 @@ class Function<void(A1, A2)>
 public:
 	void operator()(A1 a1, A2 a2)
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); 
 		ctx->execute();
 		ctx->release();
@@ -772,7 +777,7 @@ class Function<R(A1, A2)>
 public:
 	R operator()(A1 a1, A2 a2)
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); 
 		ctx->execute();
 		R ret = ReturnReader<R>()(ctx); 
@@ -794,7 +799,7 @@ class Function<void(A1, A2, A3)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3)
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); 
 		ctx->execute();
 		ctx->release();
@@ -814,7 +819,7 @@ class Function<R(A1, A2, A3)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3)
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); 
 		ctx->execute();
 		R ret = ReturnReader<R>()(ctx); 
@@ -836,7 +841,7 @@ class Function<void(A1, A2, A3, A4)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4)
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); 
 		ctx->execute();
 		ctx->release();
@@ -856,7 +861,7 @@ class Function<R(A1, A2, A3, A4)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4)
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); 
 		ctx->execute();
 		R ret = ReturnReader<R>()(ctx); 
@@ -878,7 +883,7 @@ class Function<void(A1, A2, A3, A4, A5)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5)
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); 
 		ctx->execute();
 		ctx->release();
@@ -898,7 +903,7 @@ class Function<R(A1, A2, A3, A4, A5)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5)
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); 
 		ctx->execute();
 		R ret = ReturnReader<R>()(ctx); 
@@ -920,7 +925,7 @@ class Function<void(A1, A2, A3, A4, A5, A6)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6)
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); 
 		ctx->execute();
 		ctx->release();
@@ -940,7 +945,7 @@ class Function<R(A1, A2, A3, A4, A5, A6)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6)
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); 
 		ctx->execute();
 		R ret = ReturnReader<R>()(ctx); 
@@ -962,7 +967,7 @@ class Function<void(A1, A2, A3, A4, A5, A6, A7)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7)
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); 
 		ctx->execute();
 		ctx->release();
@@ -982,7 +987,7 @@ class Function<R(A1, A2, A3, A4, A5, A6, A7)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7)
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); 
 		ctx->execute();
 		R ret = ReturnReader<R>()(ctx); 
@@ -1004,7 +1009,7 @@ class Function<void(A1, A2, A3, A4, A5, A6, A7, A8)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8)
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); 
 		ctx->execute();
 		ctx->release();
@@ -1024,7 +1029,7 @@ class Function<R(A1, A2, A3, A4, A5, A6, A7, A8)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8)
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); 
 		ctx->execute();
 		R ret = ReturnReader<R>()(ctx); 
@@ -1046,7 +1051,7 @@ class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9)
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); 
 		ctx->execute();
 		ctx->release();
@@ -1066,7 +1071,7 @@ class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9)
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); 
 		ctx->execute();
 		R ret = ReturnReader<R>()(ctx); 
@@ -1088,7 +1093,7 @@ class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10)
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); 
 		ctx->execute();
 		ctx->release();
@@ -1108,7 +1113,7 @@ class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10)
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); 
 		ctx->execute();
 		R ret = ReturnReader<R>()(ctx); 
@@ -1130,7 +1135,7 @@ class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11)
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); ParameterSetter<A11>()(ctx, a11); 
 		ctx->execute();
 		ctx->release();
@@ -1150,7 +1155,7 @@ class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11)
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); ParameterSetter<A11>()(ctx, a11); 
 		ctx->execute();
 		R ret = ReturnReader<R>()(ctx); 
@@ -1172,7 +1177,7 @@ class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12)
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); ParameterSetter<A11>()(ctx, a11); ParameterSetter<A12>()(ctx, a12); 
 		ctx->execute();
 		ctx->release();
@@ -1192,7 +1197,7 @@ class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12)
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); ParameterSetter<A11>()(ctx, a11); ParameterSetter<A12>()(ctx, a12); 
 		ctx->execute();
 		R ret = ReturnReader<R>()(ctx); 
@@ -1214,7 +1219,7 @@ class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13)>
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12, A13 a13)
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); ParameterSetter<A11>()(ctx, a11); ParameterSetter<A12>()(ctx, a12); ParameterSetter<A13>()(ctx, a13); 
 		ctx->execute();
 		ctx->release();
@@ -1234,7 +1239,7 @@ class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12, A13 a13)
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); ParameterSetter<A11>()(ctx, a11); ParameterSetter<A12>()(ctx, a12); ParameterSetter<A13>()(ctx, a13); 
 		ctx->execute();
 		R ret = ReturnReader<R>()(ctx); 
@@ -1256,7 +1261,7 @@ class Function<void(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14)
 public:
 	void operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12, A13 a13, A14 a14)
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); ParameterSetter<A11>()(ctx, a11); ParameterSetter<A12>()(ctx, a12); ParameterSetter<A13>()(ctx, a13); ParameterSetter<A14>()(ctx, a14); 
 		ctx->execute();
 		ctx->release();
@@ -1276,7 +1281,7 @@ class Function<R(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14)>
 public:
 	R operator()(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10, A11 a11, A12 a12, A13 a13, A14 a14)
 	{
-		Context* ctx = this->_engine.getContext(this->_function);
+		Context* ctx = this->_engine->getContext(this->_function);
 		ParameterSetter<A1>()(ctx, a1); ParameterSetter<A2>()(ctx, a2); ParameterSetter<A3>()(ctx, a3); ParameterSetter<A4>()(ctx, a4); ParameterSetter<A5>()(ctx, a5); ParameterSetter<A6>()(ctx, a6); ParameterSetter<A7>()(ctx, a7); ParameterSetter<A8>()(ctx, a8); ParameterSetter<A9>()(ctx, a9); ParameterSetter<A10>()(ctx, a10); ParameterSetter<A11>()(ctx, a11); ParameterSetter<A12>()(ctx, a12); ParameterSetter<A13>()(ctx, a13); ParameterSetter<A14>()(ctx, a14); 
 		ctx->execute();
 		R ret = ReturnReader<R>()(ctx); 
@@ -1329,7 +1334,7 @@ public:
 	{
 		int funcid = this->getFunctionByDecl(Function<F>::decompose(name));
 		AB_SCRIPT_ASSERT(funcid >= 0, "Function could not be found.", AB_THROW, &this->_engine);
-		Function<F> func(this->_engine, funcid);
+		Function<F> func(&this->_engine, funcid);
 		return func;
 	}
 

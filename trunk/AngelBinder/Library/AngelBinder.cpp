@@ -38,7 +38,7 @@ void Engine::initialize()
 		this->_builder = new CScriptBuilder();
 		AB_SCRIPT_ASSERT(this->_builder != NULL, "Could not create CScriptBuilder instance.", AB_THROW, this);
 
-		this->_engine->SetMessageCallback(asMETHOD(Engine, onScriptMessage), this, asCALL_THISCALL);
+		this->_engine->SetMessageCallback(asFUNCTION(&Engine::onScriptMessage), this, asCALL_CDECL);
 		this->_engine->SetEngineProperty(asEP_SCRIPT_SCANNER, 0);
 	}
 }
@@ -57,23 +57,27 @@ void Engine::uninitialize()
 	this->_engine = NULL;
 }
 
-void Engine::onScriptMessage( const asSMessageInfo *msg, void *param )
+void __cdecl Engine::onScriptMessage( const asSMessageInfo *msg, void *param )
 {
-	std::stringstream stream;
-	switch(msg->type)
+	Engine* engine = (Engine*)(param);
+	if(engine != NULL)
 	{
-	case asMSGTYPE_ERROR:
-		stream << "[Script Error] ";
-		break;
-	case asMSGTYPE_INFORMATION:
-		stream << "[Information] ";
-		break;
-	case asMSGTYPE_WARNING:
-		stream << "[Warning] ";
-		break;
+		std::stringstream stream;
+		switch(msg->type)
+		{
+		case asMSGTYPE_ERROR:
+			stream << "[Script Error] ";
+			break;
+		case asMSGTYPE_INFORMATION:
+			stream << "[Information] ";
+			break;
+		case asMSGTYPE_WARNING:
+			stream << "[Warning] ";
+			break;
+		}
+		stream << "Line (" << msg->row << ", " << msg->col << ") : " << msg->message;
+		AB_MESSAGE_INVOKE_STATIC(engine, engine, stream.str().c_str());
 	}
-	stream << "Line (" << msg->row << ", " << msg->col << ") : " << msg->message;
-	AB_MESSAGE_INVOKE_STATIC(this, this, stream.str().c_str());
 }
 
 Engine::Engine()

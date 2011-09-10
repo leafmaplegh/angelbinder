@@ -42,7 +42,7 @@ TEST_START(functions)
 
 	 /// POOOR timing algorithm, but it was was just for testing...
 	float avgtime = 0;
-	for(int t = 0; t < 15; t++)
+	for(int t = 0; t < 50; t++)
 	{
 		DWORD time = 0;
 		DWORD start = GetTickCount();
@@ -55,7 +55,7 @@ TEST_START(functions)
 	avgtime /= 15.0f;
 
 	std::stringstream stream;
-	stream << "150.000 calls took " << avgtime << "ms to execute...";
+	stream << "500.000 calls took " << avgtime << "ms to execute...";
 	TEST_LOG(stream.str());
 
 TEST_END

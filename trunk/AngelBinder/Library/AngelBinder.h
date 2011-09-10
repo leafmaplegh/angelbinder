@@ -359,7 +359,7 @@ private:
 	ContextPool _pool;
 
 	/// Raised when script machine writes a message
-	static void __cdecl onScriptMessage( const AS_NAMESPACE_QUALIFIER asSMessageInfo *msg, void *param );
+	void onScriptMessage( const AS_NAMESPACE_QUALIFIER asSMessageInfo *msg, void *param );
 
 	///
 	/// Startup stuff

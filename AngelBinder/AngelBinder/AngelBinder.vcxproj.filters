@@ -18,9 +18,15 @@
     <Filter Include="AngelBinder\Examples\Tests">
       <UniqueIdentifier>{72fb42ee-8e0f-451e-81ca-a13ff2ac6864}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Scripts">
+      <UniqueIdentifier>{b59ba3a8-29ef-4a42-accf-a2c8cf36a22d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="ReadMe.txt" />
+    <None Include="..\Builds\Scripts\functions.as">
+      <Filter>Scripts</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">

@@ -80,6 +80,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <None Include="..\Builds\Scripts\functions.as" />
     <None Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>

@@ -76,7 +76,10 @@ void __cdecl Engine::onScriptMessage( const asSMessageInfo *msg, void *param )
 			break;
 		}
 		stream << "Line (" << msg->row << ", " << msg->col << ") : " << msg->message;
-		AB_MESSAGE_INVOKE_STATIC(engine, engine, stream.str().c_str());
+		if(engine->onMessage() != NULL)
+		{
+			engine->onMessage()(engine, stream.str());
+		}
 	}
 }
 
@@ -328,7 +331,6 @@ void DummyConstructor( void* memory )
 void DummyDestructor( void* memory )
 {
 }
-
 
 Context::Context(ContextPool& pool, int id) 
 	: _pool(pool), _params(0), _id(id)

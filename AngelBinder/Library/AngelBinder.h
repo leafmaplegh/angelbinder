@@ -1438,7 +1438,7 @@ public:
 class BaseExporter
 {
 public:
-	virtual void finish(Module& script) = 0;
+	virtual void finish(Engine& engine) = 0;
 };
 
 ///
@@ -1463,7 +1463,7 @@ protected:
 	///
 	/// Called when registering is needed.
 	///
-	virtual void finish(Module& instance);
+	virtual void finish(Engine& instance);
 
 public:
 	template<typename T>
@@ -1562,7 +1562,7 @@ protected:
 	///
 	/// Called when registering is needed.
 	///
-	virtual void finish(Module& instance);
+	virtual void finish(Engine& instance);
 
 public:
 	///
@@ -2293,7 +2293,7 @@ protected:
 	///
 	/// Called when registering is needed.
 	///
-	virtual void finish(Module& instance)
+	virtual void finish(Engine& instance)
 	{
 
 		int flags = this->_flags;
@@ -2306,22 +2306,22 @@ protected:
 		// flags |= this->_copy == NULL ? 0 : asOBJ_APP_CLASS_COPY_CONSTRUCTOR;
 
 		std::string name = Type<T>::toString();
-		AB_MESSAGE_INVOKE_STATIC(&instance.engine(), &instance.engine(), "Registering type '" + name + "'");
-		int r = instance.engine().asEngine()->RegisterObjectType(Type<T>::toString().c_str(), sizeof(T), flags);
-		AB_SCRIPT_ASSERT(r >= 0, std::string("Could not register type '" + name + "'").c_str(), AB_THROW, &instance.engine());
+		AB_MESSAGE_INVOKE_STATIC(&instance, &instance, "Registering type '" + name + "'");
+		int r = instance.asEngine()->RegisterObjectType(Type<T>::toString().c_str(), sizeof(T), flags);
+		AB_SCRIPT_ASSERT(r >= 0, std::string("Could not register type '" + name + "'").c_str(), AB_THROW, &instance);
 
 		if(this->_ctorset && !this->_ctors.empty())
 		{
-			AB_SCRIPT_ASSERT(false, std::string("Can't register dummy constructor if there's another constructors.").c_str(), AB_THROW, &instance.engine());
+			AB_SCRIPT_ASSERT(false, std::string("Can't register dummy constructor if there's another constructors.").c_str(), AB_THROW, &instance);
 		}
 
 		while(!this->_ctors.empty())
 		{
 			ConstructorClass memb = this->_ctors.front();
 			std::string decomp = memb.decompose();
-			AB_MESSAGE_INVOKE_STATIC(&instance.engine(), &instance.engine(), "Registering constructor for '" + name + "' as '" + decomp + "'");
+			AB_MESSAGE_INVOKE_STATIC(&instance, &instance, "Registering constructor for '" + name + "' as '" + decomp + "'");
 			r = instance.engine().asEngine()->RegisterObjectBehaviour(name.c_str(), AS_NAMESPACE_QUALIFIER asBEHAVE_CONSTRUCT, decomp.c_str(), memb.address(), AS_NAMESPACE_QUALIFIER asCALL_CDECL_OBJLAST);
-			AB_SCRIPT_ASSERT(r >= 0, std::string("Can't register constructor for type '" + name + "'").c_str(), AB_THROW, &instance.engine());
+			AB_SCRIPT_ASSERT(r >= 0, std::string("Can't register constructor for type '" + name + "'").c_str(), AB_THROW, &instance);
 			this->_ctors.pop();
 		}
 
@@ -2741,19 +2741,19 @@ class Exporter
 {
 private:
 	/// Stores the script instance.
-	Module& _module;
+	Engine& _engine;
 
 protected:
 	///
 	/// Initializes the exporter
 	///
-	Exporter(Module& module);
+	Exporter(Engine& engine);
 
 public:
 	///
 	/// Starts an exporter
 	///
-	static Exporter Export( Module* module );
+	static Exporter Export(Engine& engine);
 
 	///
 	/// FunctionExporter wrapper
@@ -2784,7 +2784,7 @@ public:
 		BaseExporter* exporter = dynamic_cast<BaseExporter*>(&exp);
 		if(exporter != NULL)
 		{
-			exporter->finish(this->_module);
+			exporter->finish(this->_engine);
 		}
 	}
 

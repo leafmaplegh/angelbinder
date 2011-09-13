@@ -194,14 +194,14 @@ Engine& Module::engine()
  * Extras
  **/
 
-Exporter::Exporter( Module& module ) 
-	: _module(module)
+Exporter::Exporter( Engine& module ) 
+	: _engine(module)
 {
 }
 
-Exporter Exporter::Export( Module* module )
+Exporter Exporter::Export( Engine& engine )
 {
-	Exporter exporter(*module);
+	Exporter exporter(engine);
 	return exporter;
 }
 
@@ -217,15 +217,15 @@ VariableExporter Exporter::Variables()
 	return exporter;
 }
 
-void FunctionExporter::finish( Module& instance )
+void FunctionExporter::finish( Engine& instance )
 {
 	while(!this->_entries.empty())
 	{
 		FunctionClass function = this->_entries.front();
 		std::string decomposition = function.decompose();
-		AB_MESSAGE_INVOKE_STATIC(&instance.engine(), &instance.engine(), "Registering function '" + function.name() + "' as '" + decomposition + "'");
-		int r = instance.engine().asEngine()->RegisterGlobalFunction(decomposition.c_str(), function.address(), function.convention());
-		AB_SCRIPT_ASSERT(r >= 0, std::string("Error registering function '" + function.name() + "'").c_str(), AB_THROW, &instance.engine());
+		AB_MESSAGE_INVOKE_STATIC(&instance, &instance, "Registering function '" + function.name() + "' as '" + decomposition + "'");
+		int r = instance.asEngine()->RegisterGlobalFunction(decomposition.c_str(), function.address(), function.convention());
+		AB_SCRIPT_ASSERT(r >= 0, std::string("Error registering function '" + function.name() + "'").c_str(), AB_THROW, &instance);
 		this->_entries.pop();
 	}
 }
@@ -283,14 +283,14 @@ VariableExporter::VariableExporter()
 {
 }
 
-void VariableExporter::finish( Module& instance )
+void VariableExporter::finish( Engine& instance )
 {
 	while(!this->_entries.empty())
 	{
 		VariableClass memb = this->_entries.front();
-		AB_MESSAGE_INVOKE_STATIC(&instance.engine(), &instance.engine(), "Registering global var '" + memb.name() + "' as '" + memb.type() + "'");
-		int r = instance.engine().asEngine()->RegisterGlobalProperty(memb.decompose().c_str(), memb.address());
-		AB_SCRIPT_ASSERT(r >= 0, std::string("Error registering global var '" + memb.name() + "'").c_str(), AB_THROW, &instance.engine());
+		AB_MESSAGE_INVOKE_STATIC(&instance, &instance, "Registering global var '" + memb.name() + "' as '" + memb.type() + "'");
+		int r = instance.asEngine()->RegisterGlobalProperty(memb.decompose().c_str(), memb.address());
+		AB_SCRIPT_ASSERT(r >= 0, std::string("Error registering global var '" + memb.name() + "'").c_str(), AB_THROW, &instance);
 		this->_entries.pop();
 	}
 }

@@ -7,9 +7,20 @@ using namespace AngelBinder
 
 #define TEST_FLOATS(var,value,eps) (fabs((var) - (value)) < eps)
 
+void test()
+{
+
+}
+
 TEST_START(functions)
 
 	std::string decomposition = Function<int(float,bool)>::decompose("function");
+
+Exporter::Export(engine)
+	[
+		Exporter::Functions()
+			.def("test", test)
+	];
 
 	Function<int(int,int)> sumi;
 	sumi = module->getFunction<int(int,int)>("sum");

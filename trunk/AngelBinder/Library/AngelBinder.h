@@ -2320,32 +2320,32 @@ protected:
 			ConstructorClass memb = this->_ctors.front();
 			std::string decomp = memb.decompose();
 			AB_MESSAGE_INVOKE_STATIC(&instance, &instance, "Registering constructor for '" + name + "' as '" + decomp + "'");
-			r = instance.engine().asEngine()->RegisterObjectBehaviour(name.c_str(), AS_NAMESPACE_QUALIFIER asBEHAVE_CONSTRUCT, decomp.c_str(), memb.address(), AS_NAMESPACE_QUALIFIER asCALL_CDECL_OBJLAST);
+			r = instance.asEngine()->RegisterObjectBehaviour(name.c_str(), AS_NAMESPACE_QUALIFIER asBEHAVE_CONSTRUCT, decomp.c_str(), memb.address(), AS_NAMESPACE_QUALIFIER asCALL_CDECL_OBJLAST);
 			AB_SCRIPT_ASSERT(r >= 0, std::string("Can't register constructor for type '" + name + "'").c_str(), AB_THROW, &instance);
 			this->_ctors.pop();
 		}
 
 		if(this->_ctorset)
 		{
-			AB_MESSAGE_INVOKE_STATIC(&instance.engine(), &instance.engine(), "Registering dummy constructor for '" + name + "' as 'void f()'");
-			int r = instance.engine().asEngine()->RegisterObjectBehaviour(name.c_str(), AS_NAMESPACE_QUALIFIER asBEHAVE_CONSTRUCT, "void f()", this->_ctor, AS_NAMESPACE_QUALIFIER asCALL_CDECL_OBJLAST);
-			AB_SCRIPT_ASSERT(r >= 0, std::string("Can't register dummy constructor for type '" + name + "'").c_str(), AB_THROW, &instance.engine());
+			AB_MESSAGE_INVOKE_STATIC(&instance, &instance, "Registering dummy constructor for '" + name + "' as 'void f()'");
+			int r = instance.asEngine()->RegisterObjectBehaviour(name.c_str(), AS_NAMESPACE_QUALIFIER asBEHAVE_CONSTRUCT, "void f()", this->_ctor, AS_NAMESPACE_QUALIFIER asCALL_CDECL_OBJLAST);
+			AB_SCRIPT_ASSERT(r >= 0, std::string("Can't register dummy constructor for type '" + name + "'").c_str(), AB_THROW, &instance);
 		}
 
 		if(this->_dtorset)
 		{
-			AB_MESSAGE_INVOKE_STATIC(&instance.engine(), &instance.engine(), "Registering destructor for '" + name + "' as 'void f()'");
-			r = instance.engine().asEngine()->RegisterObjectBehaviour(name.c_str(), AS_NAMESPACE_QUALIFIER asBEHAVE_DESTRUCT, "void f()", this->_dtor, AS_NAMESPACE_QUALIFIER asCALL_CDECL_OBJLAST);
-			AB_SCRIPT_ASSERT(r >= 0, std::string("Can't register destructor for type '" + name + "'").c_str(), AB_THROW, &instance.engine());
+			AB_MESSAGE_INVOKE_STATIC(&instance, &instance, "Registering destructor for '" + name + "' as 'void f()'");
+			r = instance.asEngine()->RegisterObjectBehaviour(name.c_str(), AS_NAMESPACE_QUALIFIER asBEHAVE_DESTRUCT, "void f()", this->_dtor, AS_NAMESPACE_QUALIFIER asCALL_CDECL_OBJLAST);
+			AB_SCRIPT_ASSERT(r >= 0, std::string("Can't register destructor for type '" + name + "'").c_str(), AB_THROW, &instance);
 		}
 
 		while(!this->_members.empty())
 		{
 			MemberClass memb = this->_members.front();
-			AB_MESSAGE_INVOKE_STATIC(&instance.engine(), &instance.engine(), "Registering '" + name + "' member as '" + memb.decompose() + "'");
+			AB_MESSAGE_INVOKE_STATIC(&instance, &instance, "Registering '" + name + "' member as '" + memb.decompose() + "'");
 
-			r = instance.engine().asEngine()->RegisterObjectProperty(name.c_str(), memb.decompose().c_str(), memb.offset());
-			AB_SCRIPT_ASSERT(r >= 0, std::string("Can't register member for type '" + name + "'").c_str(), AB_THROW, &instance.engine());
+			r = instance.asEngine()->RegisterObjectProperty(name.c_str(), memb.decompose().c_str(), memb.offset());
+			AB_SCRIPT_ASSERT(r >= 0, std::string("Can't register member for type '" + name + "'").c_str(), AB_THROW, &instance);
 
 			this->_members.pop();
 		}
@@ -2353,19 +2353,19 @@ protected:
 		while(!this->_accessors.empty())
 		{
 			AccessorClass memb = this->_accessors.front();
-			AB_MESSAGE_INVOKE_STATIC(&instance.engine(), &instance.engine(), "Registering '" + name + "' accessor for property '" + memb.name() + "'");
+			AB_MESSAGE_INVOKE_STATIC(&instance, &instance, "Registering '" + name + "' accessor for property '" + memb.name() + "'");
 
 			if(memb.hasSet())
 			{
 				MethodClass setf = memb.set();
-				r = instance.engine().asEngine()->RegisterObjectMethod(name.c_str(), setf.decompose().c_str(), setf.address(), AS_NAMESPACE_QUALIFIER asCALL_THISCALL);
-				AB_SCRIPT_ASSERT(r >= 0, std::string("Can't register accessor's 'set' method for type '" + name + "'").c_str(), AB_THROW, &instance.engine());
+				r = instance.asEngine()->RegisterObjectMethod(name.c_str(), setf.decompose().c_str(), setf.address(), AS_NAMESPACE_QUALIFIER asCALL_THISCALL);
+				AB_SCRIPT_ASSERT(r >= 0, std::string("Can't register accessor's 'set' method for type '" + name + "'").c_str(), AB_THROW, &instance);
 			}
 			if(memb.hasGet())
 			{
 				MethodClass getf = memb.get();
-				r = instance.engine().asEngine()->RegisterObjectMethod(name.c_str(), getf.decompose().c_str(), getf.address(), AS_NAMESPACE_QUALIFIER asCALL_THISCALL);
-				AB_SCRIPT_ASSERT(r >= 0, std::string("Can't register accessor's 'get' method for type '" + name + "'").c_str(), AB_THROW, &instance.engine());
+				r = instance.asEngine()->RegisterObjectMethod(name.c_str(), getf.decompose().c_str(), getf.address(), AS_NAMESPACE_QUALIFIER asCALL_THISCALL);
+				AB_SCRIPT_ASSERT(r >= 0, std::string("Can't register accessor's 'get' method for type '" + name + "'").c_str(), AB_THROW, &instance);
 			}
 
 			this->_accessors.pop();
@@ -2375,9 +2375,9 @@ protected:
 		{
 			MethodClass memb = this->_methods.front();
 			std::string decomp = memb.decompose();
-			AB_MESSAGE_INVOKE_STATIC(&instance.engine(), &instance.engine(), "Registering method for '" + name + "' as '" + decomp + "'");
-			r = instance.engine().asEngine()->RegisterObjectMethod(name.c_str(), decomp.c_str(), memb.address(), AS_NAMESPACE_QUALIFIER asCALL_THISCALL);
-			AB_SCRIPT_ASSERT(r >= 0, std::string("Can't register method for type '" + name + "'").c_str(), AB_THROW, &instance.engine());
+			AB_MESSAGE_INVOKE_STATIC(&instance, &instance, "Registering method for '" + name + "' as '" + decomp + "'");
+			r = instance.asEngine()->RegisterObjectMethod(name.c_str(), decomp.c_str(), memb.address(), AS_NAMESPACE_QUALIFIER asCALL_THISCALL);
+			AB_SCRIPT_ASSERT(r >= 0, std::string("Can't register method for type '" + name + "'").c_str(), AB_THROW, &instance);
 			this->_methods.pop();
 		}
 

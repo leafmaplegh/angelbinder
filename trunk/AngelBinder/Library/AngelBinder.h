@@ -37,22 +37,30 @@
 ///
 AB_BEGIN_NAMESPACE
 
-	///
-	/// Macro definitions
-	///
+///
+/// Macro definitions
+///
 #define AB_THROW		true
 #define AB_NOTHROW		false
 
+// #define AB_VERBOSE_OUTPUT
+
+#if defined(AB_VERBOSE_OUTPUT)
 #define AB_MESSAGE_INVOKE(i,m)				if(this->onMessage() != NULL) this->onMessage()(i,m);
 #define AB_MESSAGE_INVOKE_STATIC(s,i,m)		if((s)->onMessage() != NULL) (s)->onMessage()(i,m);
+#else
+#define AB_MESSAGE_INVOKE(i,m)				
+#define AB_MESSAGE_INVOKE_STATIC(s,i,m)		
+#endif
 
 #define AB_SCRIPT_ASSERT(x,m,t,i) { \
 	if(!(x)) { \
-	if((t)) { \
-	throw std::exception(m); \
-	} else { \
-	AB_MESSAGE_INVOKE_STATIC(##i, ##i, ##m); \
-	} \
+		if((t)) { \
+			if((i)->onMessage() != NULL) (i)->onMessage()(i,m); \
+			throw std::exception(m); \
+		} else { \
+			if((i)->onMessage() != NULL) (i)->onMessage()(i,m); \
+		} \
 	} \
 }
 
@@ -62,10 +70,10 @@ AB_BEGIN_NAMESPACE
 #define AB_FUNCTIONPR(f,p,r)	AS_NAMESPACE_QUALIFIER asFUNCTIONPR(##f, ##p, ##r)
 #define AB_METHOD(c,p,r,ptr)	AS_NAMESPACE_QUALIFIER asSMethodPtr<sizeof(void (c::*)())>::Convert(AS_METHOD_AMBIGUITY_CAST(r (c::*)p)(ptr))
 
-	///
-	/// Type name string conversion
-	///
-	template<typename T>
+///
+/// Type name string conversion
+///
+template<typename T>
 struct TypeString
 {
 	///
@@ -82,59 +90,59 @@ struct TypeString
 ///
 #define AB_TRANSLATE_TYPE(t,n) \
 	template<> \
-struct AB_NAMESPACE_QUALIFIER TypeString<t> \
-{ \
-	static std::string value() \
-{ \
-	return n; \
-} \
-}; 
+	struct AB_NAMESPACE_QUALIFIER TypeString<t> \
+	{ \
+		static std::string value() \
+		{ \
+			return n; \
+		} \
+	}; 
 
 ///
 /// Macro to help declaring parameter setters.
 ///
 #define AB_PARAMETER_SETTER(t,f) \
 	template<> \
-struct ParameterSetter<t> \
-{ \
-	void operator()(Context* context, t value) \
-{ \
-	context->f(value); \
-} \
-}; 
+	struct ParameterSetter<t> \
+	{ \
+		void operator()(Context* context, t value) \
+		{ \
+			context->f(value); \
+		} \
+	}; 
 
 ///
 /// Macro to help declaring return value readers.
 ///
 #define AB_RETURN_READER(t,f) \
 	template<> \
-struct ReturnReader<t> \
-{ \
-	t operator()(Context* context) \
-{ \
-	return (t)context->f(); \
-} \
-}; 
+	struct ReturnReader<t> \
+	{ \
+		t operator()(Context* context) \
+		{ \
+			return (t)context->f(); \
+		} \
+	}; 
 
 ///
 /// Built-in type definition
 ///
 AB_TRANSLATE_TYPE(char, "int8")
-	AB_TRANSLATE_TYPE(unsigned char, "uint8")
-	AB_TRANSLATE_TYPE(short, "int16")
-	AB_TRANSLATE_TYPE(unsigned short, "uint16")
-	AB_TRANSLATE_TYPE(int, "int")
-	AB_TRANSLATE_TYPE(unsigned int, "uint")
-	AB_TRANSLATE_TYPE(long long, "int64")
-	AB_TRANSLATE_TYPE(unsigned long long, "uint64")
-	AB_TRANSLATE_TYPE(float, "float")
-	AB_TRANSLATE_TYPE(double, "double")
-	AB_TRANSLATE_TYPE(bool, "bool")
+AB_TRANSLATE_TYPE(unsigned char, "uint8")
+AB_TRANSLATE_TYPE(short, "int16")
+AB_TRANSLATE_TYPE(unsigned short, "uint16")
+AB_TRANSLATE_TYPE(int, "int")
+AB_TRANSLATE_TYPE(unsigned int, "uint")
+AB_TRANSLATE_TYPE(long long, "int64")
+AB_TRANSLATE_TYPE(unsigned long long, "uint64")
+AB_TRANSLATE_TYPE(float, "float")
+AB_TRANSLATE_TYPE(double, "double")
+AB_TRANSLATE_TYPE(bool, "bool")
 
-	///
-	/// Base type class used to convert template into strings.
-	///
-	template<typename T>
+///
+/// Base type class used to convert template into strings.
+///
+template<typename T>
 struct Type
 {
 	static std::string toString()

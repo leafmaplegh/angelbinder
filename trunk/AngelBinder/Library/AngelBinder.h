@@ -2078,9 +2078,6 @@ public:
 
 };
 
-typedef struct {} ReadOnlyProperty;
-typedef struct {} WriteOnlyProperty;
-
 ///
 /// Class accessors
 ///
@@ -2109,33 +2106,44 @@ private:
 protected:
 	enum AcessorType
 	{
-		ReadOnly, WriteOnly
+		ReadOnly = 1, 
+		WriteOnly = 2
 	};
 
 	///
 	/// AccessorClass constructor
 	///
-	AccessorClass(std::string name, std::string type, AS_NAMESPACE_QUALIFIER asSFuncPtr getfunc, AS_NAMESPACE_QUALIFIER asSFuncPtr setfunc) 
+	AccessorClass(std::string name, std::string type, AS_NAMESPACE_QUALIFIER asSFuncPtr getfunc, AS_NAMESPACE_QUALIFIER asSFuncPtr setfunc, bool indexed = false) 
 		: _name(name), 
 		_getfunc("get_" + name, type, getfunc), 
 		_setfunc("set_" + name, "void", setfunc), 
 		_getfuncset(true),
 		_setfuncset(true)
 	{
+		if(indexed)
+		{
+			this->_getfunc.parameters().push_back("int");
+			this->_setfunc.parameters().push_back("int");
+		}
 		this->_setfunc.parameters().push_back(type);
 	}
 
 	///
 	/// AccessorClass constructor
 	///
-	AccessorClass(std::string name, std::string type, AcessorType acessortype, AS_NAMESPACE_QUALIFIER asSFuncPtr func) 
+	AccessorClass(std::string name, std::string type, AcessorType acessortype, AS_NAMESPACE_QUALIFIER asSFuncPtr func, bool indexed = false) 
 		: _name(name),
 		_getfunc("get_" + name, type, func), 
 		_setfunc("set_" + name, "void", func), 
-		_getfuncset(acessortype == ReadOnly),
-		_setfuncset(acessortype == WriteOnly)
+		_getfuncset((acessortype & ReadOnly) == ReadOnly),
+		_setfuncset((acessortype & WriteOnly) == WriteOnly)
 	{
-		if(acessortype == WriteOnly)
+		if(indexed)
+		{
+			this->_getfunc.parameters().push_back("int");
+			this->_setfunc.parameters().push_back("int");
+		}
+		if((acessortype & WriteOnly) == WriteOnly)
 		{
 			this->_setfunc.parameters().push_back(type);
 		}
@@ -2730,12 +2738,34 @@ public:
 	}
 
 	///
+	/// Registers a read-only property
+	///
+	template<typename V>
+	ClassExporter& property_reader(std::string name, V (T::*getf)(int) const)
+	{
+		AccessorClass access(name, Type<V>::toString(), AccessorClass::ReadOnly, AB_METHOD(T, (int) const, V, getf));
+		this->_accessors.push(access);
+		return *this;
+	}
+
+	///
 	/// Registers a write-only property
 	///
 	template<typename V>
-	ClassExporter& property_writer(std::string name, void (T::*getf)(V))
+	ClassExporter& property_writer(std::string name, void (T::*setf)(V))
 	{
 		AccessorClass access(name, Type<V>::toString(), AccessorClass::WriteOnly, AB_METHOD(T, (V), void, setf));
+		this->_accessors.push(access);
+		return *this;
+	}
+
+	///
+	/// Registers a write-only property
+	///
+	template<typename V>
+	ClassExporter& property_writer(std::string name, void (T::*setf)(int, V))
+	{
+		AccessorClass access(name, Type<V>::toString(), AccessorClass::WriteOnly, AB_METHOD(T, (int, V), void, setf));
 		this->_accessors.push(access);
 		return *this;
 	}

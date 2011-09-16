@@ -2708,6 +2708,17 @@ public:
 	}
 
 	///
+	/// Accessor functions
+	///
+	template<typename V>
+	ClassExporter& property(std::string name, V (T::*getf)(int) const, void (T::*setf)(int, V))
+	{
+		AccessorClass access(name, Type<V>::toString(), AB_METHOD(T, (int) const, V, getf), AB_METHOD(T, (int, V), void, setf));
+		this->_accessors.push(access);
+		return *this;
+	}
+
+	///
 	/// Registers a read-only property
 	///
 	template<typename V>
